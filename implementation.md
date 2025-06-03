@@ -95,7 +95,7 @@
   - **Step Dependencies**: Steps 5, 6
   - **User Instructions**: Verify table displays correctly and filters work as expected
 
-- [ ] Step 8: Implement New Task Modal
+- [x] Step 8: Implement New Task Modal
   - **Task**: Create the new task creation modal with form validation
   - **Description**: Builds the task creation interface with repo URL validation, prompt input, and form submission as specified in the PRD
   - **Files**:

@@ -1,9 +1,13 @@
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui'
-import TableFilters from '@/components/dashboard/TableFilters'
-import TaskTable from '@/components/dashboard/TaskTable'
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import Button from '../components/ui/Button';
+import TableFilters from '../components/dashboard/TableFilters';
+import TaskTable from '../components/dashboard/TaskTable';
+import { NewTaskModal } from '../components/dashboard/NewTaskModal';
 
 export default function Dashboard() {
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page header */}
@@ -17,7 +21,10 @@ export default function Dashboard() {
           </p>
         </div>
         
-        <Button icon={<Plus className="h-4 w-4" />}>
+        <Button 
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsNewTaskModalOpen(true)}
+        >
           New Task
         </Button>
       </div>
@@ -29,6 +36,12 @@ export default function Dashboard() {
 
       {/* Task table */}
       <TaskTable />
+
+      {/* New Task Modal */}
+      <NewTaskModal
+        isOpen={isNewTaskModalOpen}
+        onClose={() => setIsNewTaskModalOpen(false)}
+      />
     </div>
-  )
+  );
 }

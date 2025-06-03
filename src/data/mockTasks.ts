@@ -143,8 +143,8 @@ export const mockThreadMessages: Record<string, ThreadMessage[]> = {
     {
       id: 'msg-3',
       role: 'amp',
-      content: 'I found the current authentication files. Now I\'ll install NextAuth.js and begin the migration:\n\n```bash\nnpm install next-auth\nnpm install @next-auth/prisma-adapter\n```\n\nCreating the NextAuth.js configuration...',
-      ts: new Date(Date.now() - 32 * 60 * 1000).toISOString(),
+      content: 'Found the following authentication-related files:\n\n```\nsrc/auth/jwt.ts\nsrc/auth/middleware.ts\nsrc/components/Login.tsx\nsrc/components/AuthProvider.tsx\nsrc/utils/session.ts\n```\n\nNow installing NextAuth.js dependencies:\n\n```bash\nnpm install next-auth @auth/prisma-adapter\nnpm install --save-dev @types/bcryptjs\n```',
+      ts: new Date(Date.now() - 33 * 60 * 1000).toISOString(),
       metadata: {
         type: 'code',
         exitCode: 0
@@ -152,15 +152,80 @@ export const mockThreadMessages: Record<string, ThreadMessage[]> = {
     },
     {
       id: 'msg-4',
+      role: 'amp',
+      content: 'Creating the NextAuth.js configuration file:\n\n```typescript\n// src/auth/config.ts\nimport { NextAuthConfig } from "next-auth"\nimport CredentialsProvider from "next-auth/providers/credentials"\nimport { PrismaAdapter } from "@auth/prisma-adapter"\nimport { db } from "@/lib/db"\nimport bcrypt from "bcryptjs"\n\nexport const authConfig: NextAuthConfig = {\n  adapter: PrismaAdapter(db),\n  providers: [\n    CredentialsProvider({\n      name: "credentials",\n      credentials: {\n        email: { label: "Email", type: "email" },\n        password: { label: "Password", type: "password" }\n      },\n      async authorize(credentials) {\n        if (!credentials?.email || !credentials?.password) {\n          return null\n        }\n\n        const user = await db.user.findUnique({\n          where: { email: credentials.email }\n        })\n\n        if (!user || !await bcrypt.compare(credentials.password, user.password)) {\n          return null\n        }\n\n        return {\n          id: user.id,\n          email: user.email,\n          name: user.name,\n        }\n      }\n    })\n  ],\n  callbacks: {\n    jwt: async ({ token, user }) => {\n      if (user) {\n        token.id = user.id\n      }\n      return token\n    },\n    session: async ({ session, token }) => {\n      if (token) {\n        session.user.id = token.id as string\n      }\n      return session\n    }\n  },\n  pages: {\n    signIn: "/auth/signin",\n    signUp: "/auth/signup",\n  }\n}\n```',
+      ts: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['src/auth/config.ts']
+      }
+    },
+    {
+      id: 'msg-5',
       role: 'user',
       content: 'Great! Make sure to maintain the existing user session format for backwards compatibility.',
       ts: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
     },
     {
-      id: 'msg-5',
+      id: 'msg-6',
       role: 'amp',
-      content: 'Absolutely! I\'m implementing a compatibility layer to ensure existing sessions continue to work. Currently working on:\n\n1. ✅ NextAuth.js configuration\n2. 🔄 Custom JWT callback for session compatibility\n3. ⏳ Updating login components\n4. ⏳ Testing with existing user sessions',
+      content: 'Absolutely! I\'m implementing a compatibility layer to ensure existing sessions continue to work. Currently working on:\n\n## Progress Status\n\n1. ✅ NextAuth.js configuration\n2. ✅ Prisma adapter setup\n3. 🔄 Custom JWT callback for session compatibility\n4. ⏳ Updating login components\n5. ⏳ Migration scripts for existing sessions\n6. ⏳ Testing with existing user sessions\n\n> **Note**: I\'m preserving the existing session structure by mapping NextAuth tokens to your current format.',
       ts: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'text'
+      }
+    },
+    {
+      id: 'msg-7',
+      role: 'amp',
+      content: 'Creating the compatibility layer:\n\n```typescript\n// src/auth/compatibility.ts\nimport { getServerSession } from "next-auth"\nimport { authConfig } from "./config"\n\n// Legacy session format compatibility\nexport interface LegacySession {\n  user: {\n    id: string\n    email: string\n    name: string\n    role: string\n    permissions: string[]\n  }\n  accessToken: string\n  refreshToken: string\n  expiresAt: number\n}\n\nexport async function getLegacySession(): Promise<LegacySession | null> {\n  const session = await getServerSession(authConfig)\n  \n  if (!session?.user) {\n    return null\n  }\n\n  // Map NextAuth session to legacy format\n  return {\n    user: {\n      id: session.user.id,\n      email: session.user.email!,\n      name: session.user.name!,\n      role: "user", // Default role\n      permissions: ["read", "write"] // Default permissions\n    },\n    accessToken: "legacy_token_" + session.user.id,\n    refreshToken: "legacy_refresh_" + session.user.id,\n    expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours\n  }\n}\n```',
+      ts: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['src/auth/compatibility.ts']
+      }
+    },
+    {
+      id: 'msg-8',
+      role: 'amp',
+      content: 'Updated the Login component to use NextAuth:\n\n```tsx\n// src/components/Login.tsx\nimport { signIn, signOut, useSession } from "next-auth/react"\nimport { useState } from "react"\n\nexport default function Login() {\n  const { data: session, status } = useSession()\n  const [email, setEmail] = useState("")\n  const [password, setPassword] = useState("")\n  const [loading, setLoading] = useState(false)\n\n  const handleSubmit = async (e: React.FormEvent) => {\n    e.preventDefault()\n    setLoading(true)\n    \n    try {\n      const result = await signIn("credentials", {\n        email,\n        password,\n        redirect: false\n      })\n      \n      if (result?.error) {\n        console.error("Login failed:", result.error)\n      } else {\n        window.location.href = "/dashboard"\n      }\n    } catch (error) {\n      console.error("Login error:", error)\n    } finally {\n      setLoading(false)\n    }\n  }\n\n  if (status === "loading") return <div>Loading...</div>\n  \n  if (session) {\n    return (\n      <div>\n        <p>Welcome, {session.user?.name}!</p>\n        <button onClick={() => signOut()}>Sign out</button>\n      </div>\n    )\n  }\n\n  return (\n    <form onSubmit={handleSubmit}>\n      <input\n        type="email"\n        value={email}\n        onChange={(e) => setEmail(e.target.value)}\n        placeholder="Email"\n        required\n      />\n      <input\n        type="password"\n        value={password}\n        onChange={(e) => setPassword(e.target.value)}\n        placeholder="Password"\n        required\n      />\n      <button type="submit" disabled={loading}>\n        {loading ? "Signing in..." : "Sign in"}\n      </button>\n    </form>\n  )\n}\n```',
+      ts: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['src/components/Login.tsx']
+      }
+    },
+    {
+      id: 'msg-9',
+      role: 'user',
+      content: 'This looks great! Can you also add tests to ensure the migration doesn\'t break existing functionality?',
+      ts: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-10',
+      role: 'amp',
+      content: 'Excellent idea! I\'ll create comprehensive tests for the authentication migration. Let me set up the test suite:\n\n```typescript\n// src/auth/__tests__/compatibility.test.ts\nimport { describe, it, expect, beforeEach, vi } from "vitest"\nimport { getLegacySession } from "../compatibility"\nimport { getServerSession } from "next-auth"\n\n// Mock NextAuth\nvi.mock("next-auth", () => ({\n  getServerSession: vi.fn()\n}))\n\nconst mockGetServerSession = vi.mocked(getServerSession)\n\ndescribe("Authentication Compatibility", () => {\n  beforeEach(() => {\n    vi.clearAllMocks()\n  })\n\n  it("should return null when no session exists", async () => {\n    mockGetServerSession.mockResolvedValue(null)\n    \n    const result = await getLegacySession()\n    \n    expect(result).toBeNull()\n  })\n\n  it("should map NextAuth session to legacy format", async () => {\n    const mockSession = {\n      user: {\n        id: "user-123",\n        email: "test@example.com",\n        name: "John Doe"\n      }\n    }\n    \n    mockGetServerSession.mockResolvedValue(mockSession)\n    \n    const result = await getLegacySession()\n    \n    expect(result).toEqual({\n      user: {\n        id: "user-123",\n        email: "test@example.com",\n        name: "John Doe",\n        role: "user",\n        permissions: ["read", "write"]\n      },\n      accessToken: "legacy_token_user-123",\n      refreshToken: "legacy_refresh_user-123",\n      expiresAt: expect.any(Number)\n    })\n  })\n\n  it("should preserve session expiration time", async () => {\n    const mockSession = {\n      user: { id: "user-123", email: "test@example.com", name: "John Doe" }\n    }\n    \n    mockGetServerSession.mockResolvedValue(mockSession)\n    \n    const before = Date.now()\n    const result = await getLegacySession()\n    const after = Date.now()\n    \n    expect(result?.expiresAt).toBeGreaterThan(before + (23 * 60 * 60 * 1000)) // At least 23 hours\n    expect(result?.expiresAt).toBeLessThan(after + (25 * 60 * 60 * 1000)) // Less than 25 hours\n  })\n})\n```',
+      ts: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['src/auth/__tests__/compatibility.test.ts']
+      }
+    },
+    {
+      id: 'msg-11',
+      role: 'amp',
+      content: 'Running the test suite to ensure everything works correctly:\n\n```bash\nnpm run test auth\n```',
+      ts: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code',
+        exitCode: 0
+      }
+    },
+    {
+      id: 'msg-12',
+      role: 'amp',
+      content: '🎉 **Migration Complete!** \n\nAll tests are passing and the authentication system has been successfully refactored to use NextAuth.js while maintaining full backwards compatibility.\n\n### Summary of Changes:\n\n| Component | Status | Details |\n|-----------|--------|----------|\n| NextAuth Config | ✅ Complete | Credentials provider with Prisma adapter |\n| Compatibility Layer | ✅ Complete | Legacy session format preserved |\n| Login Component | ✅ Complete | Updated to use NextAuth hooks |\n| Test Suite | ✅ Complete | 15 tests passing, 100% coverage |\n| Migration Scripts | ✅ Complete | Existing sessions remain valid |\n\n### Key Features:\n- 🔒 Enhanced security with NextAuth.js\n- 🔄 Zero downtime migration\n- 📊 100% test coverage\n- 🛡️ Backwards compatibility maintained\n- 📱 Session persistence across devices\n\nThe refactor is ready for code review and deployment!',
+      ts: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
       metadata: {
         type: 'text'
       }
@@ -176,8 +241,144 @@ export const mockThreadMessages: Record<string, ThreadMessage[]> = {
     {
       id: 'msg-7',
       role: 'amp',
-      content: 'Structured logging has been successfully implemented! ✅\n\nKey improvements:\n- Request ID tracking across all endpoints\n- User context in all log entries\n- Performance metrics with response times\n- Error tracking with stack traces\n\nAll tests are passing and the PR is ready for review.',
+      content: 'Structured logging has been successfully implemented! ✅\n\n## Key improvements:\n\n- **Request ID tracking** across all endpoints\n- **User context** in all log entries  \n- **Performance metrics** with response times\n- **Error tracking** with stack traces\n- **Structured format** for better parsing\n\nAll tests are passing and the PR is ready for review.',
       ts: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  '3': [
+    {
+      id: 'msg-12',
+      role: 'system',
+      content: 'Task started: Fix iOS profile crash',
+      ts: new Date(Date.now() - 6.5 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-13',
+      role: 'amp',
+      content: 'I\'ll investigate the iOS profile crash issue. Let me start by examining the crash logs and navigation stack:\n\n```bash\ngrep -r "profile" src/ --include="*.ts" --include="*.tsx"\n```',
+      ts: new Date(Date.now() - 6.4 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code'
+      }
+    },
+    {
+      id: 'msg-14',
+      role: 'amp',
+      content: 'Found the issue! The crash occurs in the ProfileScreen component when trying to access navigation props that are undefined on iOS 15. Here\'s the problematic code:\n\n```typescript\n// src/screens/ProfileScreen.tsx (BEFORE)\nexport function ProfileScreen({ navigation, route }) {\n  const handleEditProfile = () => {\n    // This crashes on iOS 15 when navigation is undefined\n    navigation.navigate(\'EditProfile\', { userId: route.params.userId })\n  }\n  \n  return (\n    <TouchableOpacity onPress={handleEditProfile}>\n      <Text>Edit Profile</Text>\n    </TouchableOpacity>\n  )\n}\n```\n\n**Root Cause**: iOS 15 has stricter navigation prop handling in React Navigation v6.',
+      ts: new Date(Date.now() - 6.2 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'error',
+        files: ['src/screens/ProfileScreen.tsx']
+      }
+    },
+    {
+      id: 'msg-15',
+      role: 'user',
+      content: 'That makes sense! Can you also check if there are other screens with similar navigation issues?',
+      ts: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-16',
+      role: 'amp',
+      content: 'Good thinking! Let me scan for similar patterns across the codebase:\n\n```bash\ngrep -r "navigation\\." src/screens/ -A 2 -B 2\n```\n\nFound **3 additional screens** with similar issues:\n\n1. `SettingsScreen.tsx` - Line 45\n2. `NotificationsScreen.tsx` - Line 23  \n3. `HelpScreen.tsx` - Line 67\n\nI\'ll fix all of them with proper navigation guards and use the `useNavigation` hook instead of props.',
+      ts: new Date(Date.now() - 5.8 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code',
+        exitCode: 0
+      }
+    },
+    {
+      id: 'msg-17',
+      role: 'amp',
+      content: 'Here\'s the fix for all affected screens using the proper React Navigation hooks:\n\n```typescript\n// src/screens/ProfileScreen.tsx (AFTER)\nimport { useNavigation, useRoute } from \'@react-navigation/native\'\nimport type { StackNavigationProp } from \'@react-navigation/stack\'\n\ntype ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, \'Profile\'>\n\nexport function ProfileScreen() {\n  const navigation = useNavigation<ProfileScreenNavigationProp>()\n  const route = useRoute<RouteProp<RootStackParamList, \'Profile\'>>()\n  \n  const handleEditProfile = useCallback(() => {\n    if (navigation && route.params?.userId) {\n      navigation.navigate(\'EditProfile\', { \n        userId: route.params.userId \n      })\n    }\n  }, [navigation, route.params?.userId])\n  \n  return (\n    <TouchableOpacity onPress={handleEditProfile}>\n      <Text>Edit Profile</Text>\n    </TouchableOpacity>\n  )\n}\n```\n\n**Key improvements:**\n- ✅ Uses `useNavigation` hook instead of props\n- ✅ Added TypeScript types for navigation\n- ✅ Added safety checks before navigation\n- ✅ Used `useCallback` for performance',
+      ts: new Date(Date.now() - 5.5 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['src/screens/ProfileScreen.tsx', 'src/screens/SettingsScreen.tsx', 'src/screens/NotificationsScreen.tsx', 'src/screens/HelpScreen.tsx']
+      }
+    },
+    {
+      id: 'msg-18',
+      role: 'system',
+      content: 'Code review requested: iOS navigation fixes',
+      ts: new Date(Date.now() - 5.2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-19',
+      role: 'user',
+      content: 'The fix looks great! Can you add some unit tests to prevent regression?',
+      ts: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-20',
+      role: 'amp',
+      content: 'Absolutely! I\'ll create comprehensive tests for the navigation fixes:\n\n```typescript\n// src/screens/__tests__/ProfileScreen.test.tsx\nimport React from \'react\'\nimport { render, fireEvent } from \'@testing-library/react-native\'\nimport { useNavigation, useRoute } from \'@react-navigation/native\'\nimport ProfileScreen from \'../ProfileScreen\'\n\n// Mock React Navigation\njest.mock(\'@react-navigation/native\', () => ({\n  useNavigation: jest.fn(),\n  useRoute: jest.fn(),\n}))\n\nconst mockNavigation = {\n  navigate: jest.fn(),\n}\n\nconst mockRoute = {\n  params: { userId: \'user-123\' },\n}\n\ndescribe(\'ProfileScreen\', () => {\n  beforeEach(() => {\n    jest.clearAllMocks()\n    ;(useNavigation as jest.Mock).mockReturnValue(mockNavigation)\n    ;(useRoute as jest.Mock).mockReturnValue(mockRoute)\n  })\n\n  it(\'should render without crashing\', () => {\n    const { getByText } = render(<ProfileScreen />)\n    expect(getByText(\'Edit Profile\')).toBeTruthy()\n  })\n\n  it(\'should navigate to EditProfile when button is pressed\', () => {\n    const { getByText } = render(<ProfileScreen />)\n    \n    fireEvent.press(getByText(\'Edit Profile\'))\n    \n    expect(mockNavigation.navigate).toHaveBeenCalledWith(\'EditProfile\', {\n      userId: \'user-123\'\n    })\n  })\n\n  it(\'should handle missing navigation gracefully\', () => {\n    ;(useNavigation as jest.Mock).mockReturnValue(null)\n    \n    const { getByText } = render(<ProfileScreen />)\n    \n    expect(() => {\n      fireEvent.press(getByText(\'Edit Profile\'))\n    }).not.toThrow()\n  })\n\n  it(\'should handle missing userId parameter\', () => {\n    ;(useRoute as jest.Mock).mockReturnValue({ params: {} })\n    \n    const { getByText } = render(<ProfileScreen />)\n    \n    fireEvent.press(getByText(\'Edit Profile\'))\n    \n    expect(mockNavigation.navigate).not.toHaveBeenCalled()\n  })\n})\n```\n\n**Tests cover:**\n- ✅ Basic rendering\n- ✅ Successful navigation\n- ✅ Null navigation handling\n- ✅ Missing parameters\n- ✅ iOS 15 edge cases',
+      ts: new Date(Date.now() - 4.5 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['src/screens/__tests__/ProfileScreen.test.tsx']
+      }
+    },
+  ],
+  '4': [
+    {
+      id: 'msg-21',
+      role: 'system',
+      content: 'Task started: Database optimization',
+      ts: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-22',
+      role: 'amp',
+      content: 'I\'ll optimize the database queries and add proper indexing. Let me start by analyzing the current performance bottlenecks:\n\n```sql\nEXPLAIN ANALYZE SELECT * FROM users \nJOIN posts ON users.id = posts.user_id \nWHERE users.created_at > \'2023-01-01\' \nORDER BY posts.created_at DESC \nLIMIT 50;\n```',
+      ts: new Date(Date.now() - 23.8 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code'
+      }
+    },
+    {
+      id: 'msg-23',
+      role: 'amp',
+      content: '⚠️ **Performance Issue Found!**\n\nCurrent query is doing a full table scan on 2.3M records:\n\n```\nSeq Scan on users  (cost=0.00..45432.00 rows=234567 width=64)\n  Filter: (created_at > \'2023-01-01\'::date)\n  Rows Removed by Filter: 1967433\nSort  (cost=15623.45..16210.87 rows=234567 width=96)\n  Sort Key: posts.created_at DESC\n  Sort Method: external sort  Disk: 18456kB\n```\n\n**Execution time: 2.4 seconds** 😱\n\nI\'ll add the missing indexes to fix this.',
+      ts: new Date(Date.now() - 23.5 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'error'
+      }
+    },
+    {
+      id: 'msg-24',
+      role: 'user',
+      content: 'Yikes! That\'s way too slow. What indexes do you recommend?',
+      ts: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-25',
+      role: 'amp',
+      content: 'Based on the query analysis, I recommend these indexes:\n\n```sql\n-- 1. Composite index for users.created_at filtering\nCREATE INDEX CONCURRENTLY idx_users_created_at \nON users (created_at) \nWHERE created_at > \'2020-01-01\';\n\n-- 2. Index for posts sorting and joining\nCREATE INDEX CONCURRENTLY idx_posts_user_created \nON posts (user_id, created_at DESC);\n\n-- 3. Covering index for frequent user lookups\nCREATE INDEX CONCURRENTLY idx_users_covering \nON users (id, email, name, created_at) \nWHERE active = true;\n```\n\n> **Note**: Using `CONCURRENTLY` to avoid blocking production traffic during index creation.',
+      ts: new Date(Date.now() - 22.8 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'file_change',
+        files: ['migrations/20231201_add_performance_indexes.sql']
+      }
+    },
+    {
+      id: 'msg-26',
+      role: 'amp',
+      content: 'After adding the indexes, let\'s verify the performance improvement:\n\n```sql\nEXPLAIN ANALYZE SELECT * FROM users \nJOIN posts ON users.id = posts.user_id \nWHERE users.created_at > \'2023-01-01\' \nORDER BY posts.created_at DESC \nLIMIT 50;\n```',
+      ts: new Date(Date.now() - 22.5 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code',
+        exitCode: 0
+      }
+    },
+    {
+      id: 'msg-27',
+      role: 'amp',
+      content: '🚀 **Massive Performance Improvement!**\n\n```\nIndex Scan using idx_users_created_at  (cost=0.43..1234.56 rows=5000 width=64)\n  Index Cond: (created_at > \'2023-01-01\'::date)\nNested Loop  (cost=0.86..2345.67 rows=5000 width=96)\n  ->  Index Scan using idx_posts_user_created on posts\n```\n\n**New execution time: 0.045 seconds** ⚡\n\n### Performance Summary:\n\n| Metric | Before | After | Improvement |\n|--------|--------|-------|-------------|\n| Execution Time | 2.4s | 0.045s | **53x faster** |\n| Disk Usage | 18MB | 0MB | **No disk sorts** |\n| Rows Scanned | 2.3M | 5K | **460x fewer** |\n| CPU Usage | 98% | 12% | **8x less** |\n\nQuery optimization complete! 🎉',
+      ts: new Date(Date.now() - 22.2 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'text'
+      }
     },
   ],
 }

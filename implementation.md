@@ -41,7 +41,7 @@
 
 ## Core UI Structure & Navigation
 
-- [ ] Step 4: Create Layout Components and Routing
+- [x] Step 4: Create Layout Components and Routing
 
   - **Task**: Build the main application layout with header, navigation, and routing structure
   - **Description**: Implements the core UI shell with header containing logo, dark mode toggle, user avatar, and sets up routing for dashboard and task detail pages

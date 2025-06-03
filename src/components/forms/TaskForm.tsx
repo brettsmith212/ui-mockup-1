@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Button from '../ui/Button';
-import Input from '../ui/Input';
+import Input, { Textarea } from '../ui/Input';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { validateTaskForm, FormErrors } from '../../utils/validation';
 import { useCreateTask } from '../../hooks/useCreateTask';
@@ -106,29 +106,16 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
           <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Initial Prompt
           </label>
-          <textarea
+          <Textarea
             id="prompt"
             value={formData.prompt}
             onChange={(e) => handleInputChange('prompt', e.target.value)}
             placeholder="Describe what you want Amp to do with this repository..."
             rows={4}
             disabled={isSubmitting}
-            className={`
-              w-full px-3 py-2 border rounded-lg
-              bg-white dark:bg-gray-800
-              text-gray-900 dark:text-gray-100
-              placeholder-gray-500 dark:placeholder-gray-400
-              focus:ring-2 focus:ring-purple-500 focus:border-transparent
-              disabled:opacity-50 disabled:cursor-not-allowed
-              ${errors.prompt 
-                ? 'border-red-300 dark:border-red-600' 
-                : 'border-gray-300 dark:border-gray-600'
-              }
-            `}
+            error={errors.prompt}
+            resize={false}
           />
-          {errors.prompt && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.prompt}</p>
-          )}
           <div className="mt-1 flex justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Minimum 10 characters, maximum 2000 characters

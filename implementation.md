@@ -145,7 +145,7 @@
   - **Step Dependencies**: Step 9
   - **User Instructions**: Test logs display and CI status information
 
-- [ ] Step 12: Implement Prompt Bar and Actions
+- [x] Step 12: Implement Prompt Bar and Actions
   - **Task**: Create the sticky prompt input with context-aware actions (Continue/Interrupt/Send)
   - **Description**: Builds the bottom prompt bar with intelligent action labeling based on task status and proper state management for interrupts
   - **Files**:

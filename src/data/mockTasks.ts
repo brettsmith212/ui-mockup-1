@@ -86,6 +86,30 @@ export const mockTasks: Task[] = [
   },
   {
     id: '7',
+    repo: 'backend/notification-service', 
+    branch: 'amp/email-templates',
+    status: 'paused',
+    prompt: 'Create email templates for user notifications including welcome, password reset, and account verification emails.',
+    attempts: 1,
+    updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+    owner: 'bob.wilson',
+    title: 'Create email notification templates',
+  },
+  {
+    id: '8',
+    repo: 'mobile/react-native-app',
+    branch: 'amp/push-notifications',
+    status: 'waiting_for_input',
+    prompt: 'Implement push notifications for iOS and Android. Need to integrate with Firebase Cloud Messaging.',
+    attempts: 1,
+    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
+    createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(), // 20 minutes ago
+    owner: 'alice.johnson',
+    title: 'Add push notifications support',
+  },
+  {
+    id: '9',
     repo: 'frontend/dashboard',
     branch: 'amp/charts-update',
     status: 'success',

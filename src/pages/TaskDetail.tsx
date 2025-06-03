@@ -5,8 +5,9 @@ import { TaskTabs, type TabType } from '@/components/task/TaskTabs'
 import { ThreadView } from '@/components/task/ThreadView'
 import { LogsView } from '@/components/task/LogsView'
 import { CIView } from '@/components/task/CIView'
+import { PromptBar } from '@/components/task/PromptBar'
 import { useTaskDetail, useTaskActions } from '@/hooks/useTaskDetail'
-import { useTaskThread, useSendMessage } from '@/hooks/useTaskThread'
+import { useTaskThread, useSendMessage, useTaskActions as useThreadActions } from '@/hooks/useTaskThread'
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>()
@@ -16,6 +17,7 @@ export default function TaskDetail() {
   const { mergePR, deleteBranch } = useTaskActions(taskId!)
   const { data: messages = [], isLoading: isThreadLoading } = useTaskThread(taskId!)
   const sendMessage = useSendMessage(taskId!)
+  const { continueTask, interruptTask, abortTask, retryTask } = useThreadActions(taskId!)
 
   if (isLoading) {
     return (
@@ -85,6 +87,17 @@ export default function TaskDetail() {
           </div>
         )}
       </div>
+
+      {/* Sticky Prompt Bar */}
+      <PromptBar
+        task={task}
+        onSendMessage={(prompt) => sendMessage.mutate(prompt)}
+        onContinue={(prompt) => continueTask.mutate(prompt)}
+        onInterrupt={(prompt) => interruptTask.mutate(prompt)}
+        onAbort={(reason) => abortTask.mutate(reason)}
+        onRetry={() => retryTask.mutate()}
+        isLoading={sendMessage.isPending || continueTask.isPending || interruptTask.isPending || abortTask.isPending || retryTask.isPending}
+      />
     </div>
   )
 }

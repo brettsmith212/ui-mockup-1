@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils'
 export type TaskStatus = 
   | 'queued' 
   | 'running' 
+  | 'paused'
+  | 'waiting_for_input'
   | 'retrying' 
   | 'needs_review' 
   | 'success' 
@@ -27,6 +29,8 @@ export default function StatusPill({ status, className, size = 'md' }: StatusPil
   const statusStyles = {
     queued: 'bg-status-queued/20 text-status-queued',
     running: 'bg-status-running/20 text-status-running',
+    paused: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    waiting_for_input: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     retrying: 'bg-status-retrying/20 text-status-retrying', 
     needs_review: 'bg-status-needs-review/20 text-status-needs-review',
     success: 'bg-status-success/20 text-status-success',
@@ -37,7 +41,9 @@ export default function StatusPill({ status, className, size = 'md' }: StatusPil
   // Status indicators (optional dots)
   const statusDots = {
     queued: '⏸️',
-    running: '🔄', 
+    running: '🔄',
+    paused: '⏯️',
+    waiting_for_input: '⌨️',
     retrying: '⚡',
     needs_review: '👀',
     success: '✅',
@@ -48,6 +54,8 @@ export default function StatusPill({ status, className, size = 'md' }: StatusPil
   const displayText = {
     queued: 'Queued',
     running: 'Running',
+    paused: 'Paused',
+    waiting_for_input: 'Waiting for Input',
     retrying: 'Retrying',
     needs_review: 'Needs Review',
     success: 'Success', 
@@ -76,6 +84,8 @@ export const getStatusColor = (status: TaskStatus): string => {
   const colors = {
     queued: 'text-slate-400',
     running: 'text-sky-500',
+    paused: 'text-yellow-500',
+    waiting_for_input: 'text-blue-500',
     retrying: 'text-amber-500',
     needs_review: 'text-violet-500',
     success: 'text-green-500',
@@ -89,6 +99,8 @@ export const getStatusBgColor = (status: TaskStatus): string => {
   const colors = {
     queued: 'bg-slate-400/20',
     running: 'bg-sky-500/20',
+    paused: 'bg-yellow-500/20',
+    waiting_for_input: 'bg-blue-500/20',
     retrying: 'bg-amber-500/20',
     needs_review: 'bg-violet-500/20',
     success: 'bg-green-500/20',

@@ -3,6 +3,8 @@
 export type TaskStatus =
   | 'queued' 
   | 'running' 
+  | 'paused'
+  | 'waiting_for_input'
   | 'retrying'
   | 'needs_review' 
   | 'success'
@@ -178,9 +180,9 @@ export interface TaskListResponse {
 }
 
 // Status utilities
-export const ACTIVE_STATUSES: TaskStatus[] = ['running', 'retrying']
+export const ACTIVE_STATUSES: TaskStatus[] = ['running', 'retrying', 'paused', 'waiting_for_input']
 export const COMPLETED_STATUSES: TaskStatus[] = ['success', 'error', 'aborted']
-export const ACTIONABLE_STATUSES: TaskStatus[] = ['error', 'aborted', 'needs_review']
+export const ACTIONABLE_STATUSES: TaskStatus[] = ['error', 'aborted', 'needs_review', 'paused', 'waiting_for_input']
 
 export const isTaskActive = (status: TaskStatus): boolean => 
   ACTIVE_STATUSES.includes(status)

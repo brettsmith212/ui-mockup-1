@@ -133,7 +133,7 @@
   - **Step Dependencies**: Step 9
   - **User Instructions**: Verify thread messages display correctly with proper styling and markdown rendering
 
-- [ ] Step 11: Create Logs and CI Views
+- [x] Step 11: Create Logs and CI Views
 
   - **Task**: Implement the logs terminal view and CI status display
   - **Description**: Builds the terminal-style logs view with xterm.js and CI status overview with GitHub Actions integration

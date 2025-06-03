@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { TaskHeader } from '@/components/task/TaskHeader'
 import { TaskTabs, type TabType } from '@/components/task/TaskTabs'
 import { ThreadView } from '@/components/task/ThreadView'
+import { LogsView } from '@/components/task/LogsView'
+import { CIView } from '@/components/task/CIView'
 import { useTaskDetail, useTaskActions } from '@/hooks/useTaskDetail'
 import { useTaskThread, useSendMessage } from '@/hooks/useTaskThread'
 
@@ -72,27 +74,14 @@ export default function TaskDetail() {
         )}
 
         {activeTab === 'logs' && (
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-              Task Logs
-            </h3>
-            <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm">
-              <div>Task #{task.id} started at {new Date(task.createdAt).toLocaleString()}</div>
-              <div>Repository: {task.repo}</div>
-              <div>Status: {task.status}</div>
-              <div className="mt-2 text-gray-400">Logs will be implemented in Step 11...</div>
-            </div>
+          <div className="card overflow-hidden" style={{ height: 'calc(100vh - 400px)' }}>
+            <LogsView taskId={taskId!} />
           </div>
         )}
 
         {activeTab === 'ci' && (
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-              CI Pipeline
-            </h3>
-            <div className="text-gray-600 dark:text-gray-400">
-              CI pipeline integration will be implemented in Step 12...
-            </div>
+          <div className="card overflow-hidden" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+            <CIView taskId={taskId!} />
           </div>
         )}
       </div>

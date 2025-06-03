@@ -266,6 +266,27 @@ export const getTaskLogs = withAuth(
   }
 )
 
+export const getLogsStream = withAuth(
+  async (client: typeof apiClient, taskId: string): Promise<TaskLogs> => {
+    if (USE_MOCK_DATA) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+      return mockTaskLogs[taskId] || {
+        taskId,
+        logs: [],
+        totalLines: 0,
+        hasMore: false,
+      }
+    }
+
+    try {
+      const response = await client.get<ApiResponse<TaskLogs>>(`/tasks/${taskId}/logs/stream`)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+)
+
 // Get task CI status
 export const getTaskCI = withAuth(
   async (client: typeof apiClient, taskId: string): Promise<CIStatus> => {
@@ -358,6 +379,7 @@ export const taskApi = {
   retryTask,
   getTaskThread,
   getTaskLogs,
+  getLogsStream,
   getTaskCI,
   mergeTask,
   deleteTaskBranch,

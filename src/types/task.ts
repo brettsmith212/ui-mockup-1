@@ -82,6 +82,7 @@ export interface CIStatus {
   checks: CICheck[]
   startedAt?: string        // ISO date string
   completedAt?: string      // ISO date string
+  lastUpdated?: string      // ISO date string
 }
 
 export interface CIJob {
@@ -91,6 +92,8 @@ export interface CIJob {
   url?: string
   startedAt?: string
   completedAt?: string
+  duration?: string
+  conclusion?: string
   steps?: CIStep[]
 }
 
@@ -99,6 +102,7 @@ export interface CIStep {
   status: 'pending' | 'running' | 'success' | 'failure' | 'skipped'
   conclusion?: string
   number: number
+  duration?: string
 }
 
 export interface CICheck {
@@ -108,6 +112,7 @@ export interface CICheck {
   conclusion?: string
   url?: string
   required: boolean
+  description?: string
 }
 
 // Task creation and update types

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronUp, ChevronDown, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, MoreHorizontal, Eye, Edit, Trash2, CheckSquare } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
@@ -36,6 +36,7 @@ export default function TaskTable() {
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
+  const [isBulkSelectMode, setIsBulkSelectMode] = useState(false)
 
   // Sort tasks locally (in a real app, this would be done server-side)
   const sortedTasks = useMemo(() => {
@@ -91,6 +92,15 @@ export default function TaskTable() {
     }
   }
 
+  const enableBulkSelectMode = () => {
+    setIsBulkSelectMode(true)
+  }
+
+  const exitBulkSelectMode = () => {
+    setIsBulkSelectMode(false)
+    setSelectedTasks(new Set())
+  }
+
   if (error) {
     return (
       <div className="card p-8 text-center">
@@ -128,44 +138,62 @@ export default function TaskTable() {
             </p>
           </div>
           
-          {selectedTasks.size > 0 && (
+          {!isBulkSelectMode ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              icon={<CheckSquare className="h-4 w-4" />}
+              onClick={enableBulkSelectMode}
+            >
+              Select Multiple
+            </Button>
+          ) : (
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {selectedTasks.size} selected
               </span>
-              <Menu as="div" className="relative">
-                <Menu.Button as={Fragment}>
-                  <Button variant="outline" size="sm" icon={<MoreHorizontal className="h-4 w-4" />}>
-                    Actions
-                  </Button>
-                </Menu.Button>
-                <Transition
-                  as={Fragment}
-                  enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
-                  leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
-                >
-                  <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700">
-                    <div className="p-1">
-                      <Menu.Item>
-                        <button className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                          <Edit className="h-4 w-4 mr-2" />
-                          Bulk Edit
-                        </button>
-                      </Menu.Item>
-                      <Menu.Item>
-                        <button className="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Selected
-                        </button>
-                      </Menu.Item>
-                    </div>
-                  </Menu.Items>
-                </Transition>
-              </Menu>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={exitBulkSelectMode}
+              >
+                Cancel
+              </Button>
+              {selectedTasks.size > 0 && (
+                <Menu as="div" className="relative">
+                  <Menu.Button as={Fragment}>
+                    <Button variant="outline" size="sm" icon={<MoreHorizontal className="h-4 w-4" />}>
+                      Actions
+                    </Button>
+                  </Menu.Button>
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700">
+                      <div className="p-1">
+                        <Menu.Item>
+                          <button className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <Edit className="h-4 w-4 mr-2" />
+                            Bulk Edit
+                          </button>
+                        </Menu.Item>
+                        <Menu.Item>
+                          <button className="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Selected
+                          </button>
+                        </Menu.Item>
+                      </div>
+                    </Menu.Items>
+                  </Transition>
+                </Menu>
+              )}
             </div>
           )}
         </div>
@@ -176,15 +204,17 @@ export default function TaskTable() {
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-              {/* Select All Checkbox */}
-              <th className="px-6 py-3 w-12">
-                <input
-                  type="checkbox"
-                  checked={selectedTasks.size === sortedTasks.length && sortedTasks.length > 0}
-                  onChange={toggleAllTasks}
-                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                />
-              </th>
+              {/* Select All Checkbox - only show in bulk select mode */}
+              {isBulkSelectMode && (
+                <th className="px-6 py-3 w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedTasks.size === sortedTasks.length && sortedTasks.length > 0}
+                    onChange={toggleAllTasks}
+                    className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
+              )}
               
               {columns.map((column) => (
                 <th
@@ -234,13 +264,13 @@ export default function TaskTable() {
               // Loading skeletons
               Array.from({ length: 5 }).map((_, index) => (
                 <Fragment key={index}>
-                  <TaskRowSkeleton />
+                  <TaskRowSkeleton showCheckbox={isBulkSelectMode} />
                 </Fragment>
               ))
             ) : sortedTasks.length === 0 ? (
               // Empty state
               <tr>
-                <td colSpan={columns.length + 2} className="px-6 py-12 text-center">
+                <td colSpan={columns.length + (isBulkSelectMode ? 2 : 1)} className="px-6 py-12 text-center">
                   <div className="text-gray-500 dark:text-gray-400">
                     <p className="text-lg font-medium mb-2">No tasks found</p>
                     <p className="text-sm">Try adjusting your filters or create a new task.</p>
@@ -254,15 +284,15 @@ export default function TaskTable() {
                   <TaskRow 
                     task={task} 
                     isSelected={selectedTasks.has(task.id)}
-                    onSelect={() => toggleTaskSelection(task.id)}
-                    checkbox={
+                    onSelect={isBulkSelectMode ? () => toggleTaskSelection(task.id) : undefined}
+                    checkbox={isBulkSelectMode ? (
                       <input
                         type="checkbox"
                         checked={selectedTasks.has(task.id)}
                         onChange={() => toggleTaskSelection(task.id)}
                         className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                       />
-                    }
+                    ) : undefined}
                     actions={
                       <Menu as="div" className="relative">
                         <Menu.Button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ExternalLink, GitBranch, Clock } from 'lucide-react'
 import { StatusPill } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -14,20 +14,31 @@ interface TaskRowProps {
 }
 
 export default function TaskRow({ task, isSelected = false, onSelect, checkbox, actions }: TaskRowProps) {
+  const navigate = useNavigate()
   const displayTitle = getTaskDisplayTitle(task)
   const elapsedTime = formatElapsedTime(task.createdAt, task.updatedAt)
+
+  const handleRowClick = () => {
+    if (onSelect) {
+      // In bulk select mode - toggle selection
+      onSelect()
+    } else {
+      // Default mode - navigate to task detail
+      navigate(`/tasks/${task.id}`)
+    }
+  }
 
   return (
     <tr
       className={cn(
-        'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
+        'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer',
         isSelected && 'bg-primary-50 dark:bg-primary-900/20'
       )}
-      onClick={onSelect}
+      onClick={handleRowClick}
     >
       {/* Checkbox */}
       {checkbox && (
-        <td className="px-6 py-4">
+        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
           {checkbox}
         </td>
       )}
@@ -73,13 +84,9 @@ export default function TaskRow({ task, isSelected = false, onSelect, checkbox, 
       {/* Prompt */}
       <td className="px-6 py-4">
         <div className="max-w-md">
-          <Link
-            to={`/tasks/${task.id}`}
-            className="text-sm text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors line-clamp-2"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="text-sm text-gray-900 dark:text-gray-100 line-clamp-2">
             {displayTitle}
-          </Link>
+          </div>
         </div>
       </td>
 
@@ -140,7 +147,7 @@ export default function TaskRow({ task, isSelected = false, onSelect, checkbox, 
 
       {/* Actions */}
       {actions && (
-        <td className="px-6 py-4">
+        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
           {actions}
         </td>
       )}
@@ -149,13 +156,15 @@ export default function TaskRow({ task, isSelected = false, onSelect, checkbox, 
 }
 
 // Skeleton loader for task rows
-export function TaskRowSkeleton() {
+export function TaskRowSkeleton({ showCheckbox = false }: { showCheckbox?: boolean }) {
   return (
     <tr className="border-b border-gray-200 dark:border-gray-700">
       {/* Checkbox */}
-      <td className="px-6 py-4">
-        <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-      </td>
+      {showCheckbox && (
+        <td className="px-6 py-4">
+          <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </td>
+      )}
       
       {/* Status */}
       <td className="px-6 py-4">

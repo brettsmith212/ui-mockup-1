@@ -233,15 +233,9 @@ export default function TaskTable() {
             {isLoading ? (
               // Loading skeletons
               Array.from({ length: 5 }).map((_, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4">
-                    <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  </td>
+                <Fragment key={index}>
                   <TaskRowSkeleton />
-                  <td className="px-6 py-4">
-                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  </td>
-                </tr>
+                </Fragment>
               ))
             ) : sortedTasks.length === 0 ? (
               // Empty state
@@ -256,63 +250,63 @@ export default function TaskTable() {
             ) : (
               // Task rows
               sortedTasks.map((task) => (
-                <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedTasks.has(task.id)}
-                      onChange={() => toggleTaskSelection(task.id)}
-                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                    />
-                  </td>
+                <Fragment key={task.id}>
                   <TaskRow 
                     task={task} 
                     isSelected={selectedTasks.has(task.id)}
                     onSelect={() => toggleTaskSelection(task.id)}
+                    checkbox={
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.has(task.id)}
+                        onChange={() => toggleTaskSelection(task.id)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                      />
+                    }
+                    actions={
+                      <Menu as="div" className="relative">
+                        <Menu.Button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                          <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                        </Menu.Button>
+                        <Transition
+                          as={Fragment}
+                          enter="transition ease-out duration-100"
+                          enterFrom="transform opacity-0 scale-95"
+                          enterTo="transform opacity-100 scale-100"
+                          leave="transition ease-in duration-75"
+                          leaveFrom="transform opacity-100 scale-100"
+                          leaveTo="transform opacity-0 scale-95"
+                        >
+                          <Menu.Items className="absolute right-0 z-10 mt-1 w-32 origin-top-right rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700">
+                            <div className="p-1">
+                              <Menu.Item>
+                                <Link
+                                  to={`/tasks/${task.id}`}
+                                  className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View
+                                </Link>
+                              </Menu.Item>
+                              <Menu.Item>
+                                <button className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </button>
+                              </Menu.Item>
+                              <Menu.Item>
+                                <button className="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </button>
+                              </Menu.Item>
+                            </div>
+                          </Menu.Items>
+                        </Transition>
+                      </Menu>
+                    }
                   />
-                  <td className="px-6 py-4">
-                    <Menu as="div" className="relative">
-                      <Menu.Button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <MoreHorizontal className="h-4 w-4 text-gray-400" />
-                      </Menu.Button>
-                      <Transition
-                        as={Fragment}
-                        enter="transition ease-out duration-100"
-                        enterFrom="transform opacity-0 scale-95"
-                        enterTo="transform opacity-100 scale-100"
-                        leave="transition ease-in duration-75"
-                        leaveFrom="transform opacity-100 scale-100"
-                        leaveTo="transform opacity-0 scale-95"
-                      >
-                        <Menu.Items className="absolute right-0 z-10 mt-1 w-32 origin-top-right rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700">
-                          <div className="p-1">
-                            <Menu.Item>
-                              <Link
-                                to={`/tasks/${task.id}`}
-                                className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </Link>
-                            </Menu.Item>
-                            <Menu.Item>
-                              <button className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </button>
-                            </Menu.Item>
-                            <Menu.Item>
-                              <button className="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </button>
-                            </Menu.Item>
-                          </div>
-                        </Menu.Items>
-                      </Transition>
-                    </Menu>
-                  </td>
-                </tr>
+                </Fragment>
               ))
             )}
           </tbody>

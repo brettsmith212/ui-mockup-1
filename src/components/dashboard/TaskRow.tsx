@@ -9,9 +9,11 @@ interface TaskRowProps {
   task: Task
   isSelected?: boolean
   onSelect?: () => void
+  checkbox?: React.ReactNode
+  actions?: React.ReactNode
 }
 
-export default function TaskRow({ task, isSelected = false, onSelect }: TaskRowProps) {
+export default function TaskRow({ task, isSelected = false, onSelect, checkbox, actions }: TaskRowProps) {
   const displayTitle = getTaskDisplayTitle(task)
   const elapsedTime = formatElapsedTime(task.createdAt, task.updatedAt)
 
@@ -23,6 +25,13 @@ export default function TaskRow({ task, isSelected = false, onSelect }: TaskRowP
       )}
       onClick={onSelect}
     >
+      {/* Checkbox */}
+      {checkbox && (
+        <td className="px-6 py-4">
+          {checkbox}
+        </td>
+      )}
+
       {/* Status */}
       <td className="px-6 py-4 whitespace-nowrap">
         <StatusPill status={task.status} size="sm" />
@@ -128,6 +137,13 @@ export default function TaskRow({ task, isSelected = false, onSelect }: TaskRowP
           {new Date(task.updatedAt).toLocaleDateString()}
         </div>
       </td>
+
+      {/* Actions */}
+      {actions && (
+        <td className="px-6 py-4">
+          {actions}
+        </td>
+      )}
     </tr>
   )
 }
@@ -136,6 +152,12 @@ export default function TaskRow({ task, isSelected = false, onSelect }: TaskRowP
 export function TaskRowSkeleton() {
   return (
     <tr className="border-b border-gray-200 dark:border-gray-700">
+      {/* Checkbox */}
+      <td className="px-6 py-4">
+        <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+      </td>
+      
+      {/* Status */}
       <td className="px-6 py-4">
         <div className="w-16 h-5 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
       </td>
@@ -168,6 +190,11 @@ export function TaskRowSkeleton() {
           <div className="w-16 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           <div className="w-20 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         </div>
+      </td>
+      
+      {/* Actions */}
+      <td className="px-6 py-4">
+        <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
       </td>
     </tr>
   )

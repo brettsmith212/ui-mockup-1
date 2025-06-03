@@ -1,9 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useState } from 'react'
-import { Button, Textarea } from '@/components/ui'
 import { TaskHeader } from '@/components/task/TaskHeader'
 import { TaskTabs, type TabType } from '@/components/task/TaskTabs'
+import { ThreadView } from '@/components/task/ThreadView'
 import { useTaskDetail, useTaskActions } from '@/hooks/useTaskDetail'
+import { useTaskThread, useSendMessage } from '@/hooks/useTaskThread'
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>()
@@ -11,6 +12,8 @@ export default function TaskDetail() {
   
   const { data: task, isLoading, error } = useTaskDetail(taskId!)
   const { mergePR, deleteBranch } = useTaskActions(taskId!)
+  const { data: messages = [], isLoading: isThreadLoading } = useTaskThread(taskId!)
+  const sendMessage = useSendMessage(taskId!)
 
   if (isLoading) {
     return (
@@ -57,45 +60,15 @@ export default function TaskDetail() {
       {/* Tab content */}
       <div className="space-y-6">
         {activeTab === 'thread' && (
-          <>
-            {/* Thread placeholder */}
-            <div className="card p-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                Conversation Thread
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">A</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl max-w-4/5">
-                      <p>Starting {task.prompt.toLowerCase()}. Analyzing current implementation...</p>
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                      2 minutes ago
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Prompt bar */}
-            <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex space-x-3">
-                <Textarea
-                  placeholder="Send a message to continue the task..."
-                  className="flex-1"
-                  resize={false}
-                  rows={2}
-                />
-                <Button className="self-end">
-                  Send
-                </Button>
-              </div>
-            </div>
-          </>
+          <div className="card overflow-hidden" style={{ height: 'calc(100vh - 400px)' }}>
+            <ThreadView
+              taskId={taskId!}
+              messages={messages}
+              isLoading={isThreadLoading}
+              onSendMessage={(message) => sendMessage.mutate(message)}
+              isConnected={true}
+            />
+          </div>
         )}
 
         {activeTab === 'logs' && (

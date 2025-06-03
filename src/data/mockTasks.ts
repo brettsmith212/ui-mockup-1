@@ -389,18 +389,22 @@ export const filterMockTasks = (params?: any): TaskListResponse => {
   // Apply sorting
   if (params?.sortBy) {
     filteredTasks.sort((a, b) => {
-      let aVal = a[params.sortBy as keyof Task]
-      let bVal = b[params.sortBy as keyof Task]
+      let aVal: any = a[params.sortBy as keyof Task]
+      let bVal: any = b[params.sortBy as keyof Task]
       
       if (params.sortBy === 'updatedAt' || params.sortBy === 'createdAt') {
         aVal = new Date(aVal as string).getTime()
         bVal = new Date(bVal as string).getTime()
       }
       
-      if (typeof aVal === 'string') {
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
         aVal = aVal.toLowerCase()
-        bVal = (bVal as string).toLowerCase()
+        bVal = bVal.toLowerCase()
       }
+      
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return 1
+      if (bVal == null) return -1
       
       if (aVal < bVal) return params.sortDirection === 'asc' ? -1 : 1
       if (aVal > bVal) return params.sortDirection === 'asc' ? 1 : -1

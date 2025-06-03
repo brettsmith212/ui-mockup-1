@@ -110,9 +110,15 @@ export default function TaskTable() {
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-              Tasks
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Tasks
+              </h3>
+              {/* Mock data indicator - remove when using real API */}
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                Demo Data
+              </span>
+            </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {isLoading ? (
                 <PulseSkeleton className="w-32 h-4" />

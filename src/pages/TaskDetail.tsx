@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, GitMerge, Trash2, Terminal, MessageSquare, Zap } from 'lucide-react'
+import { Button, StatusPill, Textarea } from '@/components/ui'
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>()
@@ -22,9 +23,7 @@ export default function TaskDetail() {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-3">
-              <span className="status-pill bg-status-running/20 text-status-running">
-                running
-              </span>
+              <StatusPill status="running" />
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 Task #{taskId}
               </span>
@@ -51,15 +50,19 @@ export default function TaskDetail() {
           </div>
           
           <div className="flex items-center space-x-3">
-            <button className="btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 flex items-center space-x-2">
-              <GitMerge className="h-4 w-4" />
-              <span>Merge PR</span>
-            </button>
+            <Button 
+              variant="success" 
+              icon={<GitMerge className="h-4 w-4" />}
+            >
+              Merge PR
+            </Button>
             
-            <button className="btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 flex items-center space-x-2">
-              <Trash2 className="h-4 w-4" />
-              <span>Delete Branch</span>
-            </button>
+            <Button 
+              variant="danger" 
+              icon={<Trash2 className="h-4 w-4" />}
+            >
+              Delete Branch
+            </Button>
           </div>
         </div>
       </div>
@@ -112,14 +115,15 @@ export default function TaskDetail() {
         {/* Prompt bar */}
         <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
           <div className="flex space-x-3">
-            <textarea
+            <Textarea
               placeholder="Send a message to continue the task..."
-              className="input flex-1 resize-none"
+              className="flex-1"
+              resize={false}
               rows={2}
             />
-            <button className="btn bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 self-end">
+            <Button className="self-end">
               Send
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -56,7 +56,7 @@
   - **Step Dependencies**: Steps 2, 3
   - **User Instructions**: Verify navigation works between pages and dark mode toggle functions
 
-- [ ] Step 5: Create Reusable UI Components
+- [x] Step 5: Create Reusable UI Components
   - **Task**: Build foundational UI components including buttons, status pills, modals, and form inputs
   - **Description**: Establishes the design system components that will be used throughout the application, ensuring consistent styling and behavior
   - **Files**:

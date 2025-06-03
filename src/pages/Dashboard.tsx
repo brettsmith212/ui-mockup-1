@@ -1,6 +1,9 @@
 import { Plus } from 'lucide-react'
+import { Button, StatusPill, type TaskStatus } from '@/components/ui'
 
 export default function Dashboard() {
+  const statuses: TaskStatus[] = ['queued', 'running', 'retrying', 'needs_review', 'success', 'error', 'aborted']
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page header */}
@@ -14,10 +17,9 @@ export default function Dashboard() {
           </p>
         </div>
         
-        <button className="btn bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>New Task</span>
-        </button>
+        <Button icon={<Plus className="h-4 w-4" />}>
+          New Task
+        </Button>
       </div>
 
       {/* Placeholder content */}
@@ -35,9 +37,9 @@ export default function Dashboard() {
               Create your first Amp task to get started with automated coding assistance.
             </p>
             
-            <button className="btn bg-primary-600 hover:bg-primary-700 text-white px-6 py-2">
+            <Button size="lg">
               Create Task
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -48,13 +50,9 @@ export default function Dashboard() {
           Status Pills Preview
         </h3>
         <div className="flex gap-2 flex-wrap">
-          <span className="status-pill bg-status-queued/20 text-status-queued">queued</span>
-          <span className="status-pill bg-status-running/20 text-status-running">running</span>
-          <span className="status-pill bg-status-retrying/20 text-status-retrying">retrying</span>
-          <span className="status-pill bg-status-needs-review/20 text-status-needs-review">needs review</span>
-          <span className="status-pill bg-status-success/20 text-status-success">success</span>
-          <span className="status-pill bg-status-error/20 text-status-error">error</span>
-          <span className="status-pill bg-status-aborted/20 text-status-aborted">aborted</span>
+          {statuses.map((status) => (
+            <StatusPill key={status} status={status} />
+          ))}
         </div>
       </div>
     </div>

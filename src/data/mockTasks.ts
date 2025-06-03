@@ -405,6 +405,80 @@ export const mockThreadMessages: Record<string, ThreadMessage[]> = {
       }
     },
   ],
+  '7': [
+    {
+      id: 'msg-7-1',
+      role: 'system',
+      content: 'Task started: Create email notification templates',
+      ts: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-7-2',
+      role: 'amp',
+      content: 'I\'ll help you create email templates for user notifications. Let me start by analyzing your current notification service structure...\n\n```bash\nfind backend/notification-service -name "*.ts" -o -name "*.html" | head -10\n```',
+      ts: new Date(Date.now() - 29 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code'
+      }
+    },
+    {
+      id: 'msg-7-3',
+      role: 'amp',
+      content: 'Found your notification service structure:\n\n```\nbackend/notification-service/\n├── src/\n│   ├── services/EmailService.ts\n│   ├── models/NotificationType.ts\n│   └── controllers/NotificationController.ts\n├── templates/ (empty)\n└── config/email.config.ts\n```\n\nI notice the templates directory exists but is empty. Before I create the email templates, I need to understand a few things about your brand and requirements:\n\n1. **Brand Colors & Logo**: What are your primary brand colors and do you have a logo URL I should include?\n2. **Email Footer**: What should be included in the footer (company address, unsubscribe links, social media)?\n3. **Template Engine**: Are you using a specific template engine (Handlebars, Mustache, etc.) or plain HTML?\n4. **Responsive Design**: Do you need mobile-responsive templates?\n\nCould you provide these details so I can create templates that match your brand guidelines?',
+      ts: new Date(Date.now() - 27 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'text'
+      }
+    },
+    {
+      id: 'msg-7-4',
+      role: 'system',
+      content: 'Task paused - waiting for user input',
+      ts: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    },
+  ],
+  '8': [
+    {
+      id: 'msg-8-1',
+      role: 'system',
+      content: 'Task started: Implement push notifications for iOS and Android',
+      ts: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'msg-8-2',
+      role: 'amp',
+      content: 'I\'ll help you implement push notifications using Firebase Cloud Messaging (FCM) for both iOS and Android. Let me start by examining your React Native project structure...\n\n```bash\nfind mobile/react-native-app -name "*.js" -o -name "*.ts" -o -name "*.json" | grep -E "(package|android|ios)" | head -10\n```',
+      ts: new Date(Date.now() - 19 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code'
+      }
+    },
+    {
+      id: 'msg-8-3',
+      role: 'amp',
+      content: 'Great! I can see you\'re using React Native with the standard structure:\n\n```\nmobile/react-native-app/\n├── package.json\n├── android/\n│   ├── app/build.gradle\n│   └── app/src/main/AndroidManifest.xml\n├── ios/\n│   ├── PushNotificationApp.xcodeproj\n│   └── PushNotificationApp/Info.plist\n└── src/\n```\n\nNow I\'ll install the required dependencies:\n\n```bash\nnpm install @react-native-firebase/app @react-native-firebase/messaging\nnpm install react-native-push-notification\n```',
+      ts: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'code',
+        exitCode: 0
+      }
+    },
+    {
+      id: 'msg-8-4',
+      role: 'amp',
+      content: 'Dependencies installed successfully! Now I need to configure Firebase for your project. \n\n**⚠️ Important Setup Required:**\n\nTo continue with the Firebase configuration, I need access to your Firebase project credentials:\n\n1. **Firebase Project**: Do you have an existing Firebase project, or should I guide you through creating one?\n2. **google-services.json**: For Android - this file goes in `android/app/`\n3. **GoogleService-Info.plist**: For iOS - this file goes in `ios/PushNotificationApp/`\n4. **Bundle ID/Package Name**: What are your app\'s bundle identifier and package name?\n\nWithout these Firebase configuration files, I can\'t complete the setup. Could you either:\n- Provide the Firebase config files, or\n- Let me know if you\'d like me to create a step-by-step guide for setting up a new Firebase project?\n\n**Next Steps After Config:**\n- Configure Android native code\n- Configure iOS native code  \n- Implement React Native push notification handling\n- Add notification permissions\n- Test on both platforms',
+      ts: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      metadata: {
+        type: 'text'
+      }
+    },
+    {
+      id: 'msg-8-5',
+      role: 'system',
+      content: 'Task waiting for input - Firebase configuration required',
+      ts: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    },
+  ],
 }
 
 // Mock logs for tasks

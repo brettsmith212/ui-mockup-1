@@ -1,6 +1,12 @@
 // Task CRUD operations and API calls
 
 import { apiClient, withAuth, handleApiError } from '@/lib/api'
+import { 
+  filterMockTasks, 
+  mockThreadMessages, 
+  mockTaskLogs, 
+  mockCIStatus 
+} from '@/data/mockTasks'
 import type {
   Task,
   TaskListResponse,
@@ -21,9 +27,20 @@ import type {
   TaskThreadQuery,
 } from '@/types/api'
 
+// MOCK DATA FLAG - Set to false to use real API
+// TODO: Remove this flag and mock data before production
+const USE_MOCK_DATA = true
+
 // Task list and filtering
 export const getTasks = withAuth(
   async (client: typeof apiClient, params?: TaskListParams): Promise<TaskListResponse> => {
+    // Return mock data if flag is enabled
+    if (USE_MOCK_DATA) {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      return filterMockTasks(params)
+    }
+
     try {
       const queryParams: TaskListQuery = {
         page: params?.page || 1,
@@ -71,6 +88,16 @@ export const getTasks = withAuth(
 // Get single task
 export const getTask = withAuth(
   async (client: typeof apiClient, taskId: string): Promise<Task> => {
+    if (USE_MOCK_DATA) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+      const mockResponse = filterMockTasks()
+      const task = mockResponse.tasks.find(t => t.id === taskId)
+      if (!task) {
+        throw new Error(`Task ${taskId} not found`)
+      }
+      return task
+    }
+
     try {
       const response = await client.get<ApiResponse<Task>>(`/tasks/${taskId}`)
       return response.data
@@ -179,6 +206,11 @@ export const retryTask = withAuth(
 // Get task thread/conversation
 export const getTaskThread = withAuth(
   async (client: typeof apiClient, taskId: string, params?: TaskThreadQuery): Promise<ThreadMessage[]> => {
+    if (USE_MOCK_DATA) {
+      await new Promise(resolve => setTimeout(resolve, 300))
+      return mockThreadMessages[taskId] || []
+    }
+
     try {
       const queryParams: TaskThreadQuery = {
         page: params?.page || 1,
@@ -200,6 +232,16 @@ export const getTaskThread = withAuth(
 // Get task logs
 export const getTaskLogs = withAuth(
   async (client: typeof apiClient, taskId: string, params?: TaskLogsQuery): Promise<TaskLogs> => {
+    if (USE_MOCK_DATA) {
+      await new Promise(resolve => setTimeout(resolve, 400))
+      return mockTaskLogs[taskId] || {
+        taskId,
+        logs: [],
+        totalLines: 0,
+        hasMore: false,
+      }
+    }
+
     try {
       const queryParams: TaskLogsQuery = {
         page: params?.page || 1,
@@ -227,6 +269,16 @@ export const getTaskLogs = withAuth(
 // Get task CI status
 export const getTaskCI = withAuth(
   async (client: typeof apiClient, taskId: string): Promise<CIStatus> => {
+    if (USE_MOCK_DATA) {
+      await new Promise(resolve => setTimeout(resolve, 350))
+      return mockCIStatus[taskId] || {
+        taskId,
+        status: 'pending',
+        jobs: [],
+        checks: [],
+      }
+    }
+
     try {
       const response = await client.get<ApiResponse<CIStatus>>(`/tasks/${taskId}/ci`)
       return response.data

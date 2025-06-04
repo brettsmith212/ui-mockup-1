@@ -1,170 +1,319 @@
-// HTTP client configuration with JWT interceptors
+// HTTP client configuration for Amp Orchestrator integration
+
+import { isDevelopment } from '../config/environment';
+import { getApiConfig, HTTP_STATUS, API_ERROR_TYPES } from '../config/api';
 
 export interface ApiError extends Error {
-  status: number
-  statusText: string
-  data?: any
+  status: number;
+  statusText: string;
+  data?: any;
+  type: string;
+  timestamp: string;
 }
 
-// API configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+// Get API configuration based on environment
+const apiConfig = getApiConfig();
 
 // Create custom error class
 class HTTPError extends Error implements ApiError {
-  status: number
-  statusText: string
-  data?: any
+  status: number;
+  statusText: string;
+  data?: any;
+  type: string;
+  timestamp: string;
 
-  constructor(status: number, statusText: string, data?: any) {
-    super(`HTTP ${status}: ${statusText}`)
-    this.name = 'HTTPError'
-    this.status = status
-    this.statusText = statusText
-    this.data = data
-  }
-}
-
-// JWT token management
-class TokenManager {
-  private tokenKey = 'amp_jwt_token'
-
-  getToken(): string | null {
-    return localStorage.getItem(this.tokenKey)
+  constructor(status: number, statusText: string, data?: any, type?: string) {
+    const message = data?.message || statusText;
+    super(`HTTP ${status}: ${message}`);
+    this.name = 'HTTPError';
+    this.status = status;
+    this.statusText = statusText;
+    this.data = data;
+    this.type = type || this.getErrorType(status);
+    this.timestamp = new Date().toISOString();
   }
 
-  setToken(token: string): void {
-    localStorage.setItem(this.tokenKey, token)
-  }
-
-  removeToken(): void {
-    localStorage.removeItem(this.tokenKey)
-  }
-
-  isTokenValid(): boolean {
-    const token = this.getToken()
-    if (!token) return false
-
-    try {
-      // Parse JWT payload (basic validation)
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      const now = Date.now() / 1000
-      
-      // Check if token is expired
-      return payload.exp > now
-    } catch {
-      return false
+  private getErrorType(status: number): string {
+    switch (status) {
+      case 0:
+        return API_ERROR_TYPES.NETWORK_ERROR;
+      case HTTP_STATUS.BAD_REQUEST:
+      case HTTP_STATUS.UNPROCESSABLE_ENTITY:
+        return API_ERROR_TYPES.VALIDATION_ERROR;
+      case HTTP_STATUS.UNAUTHORIZED:
+      case HTTP_STATUS.FORBIDDEN:
+        return API_ERROR_TYPES.AUTHORIZATION_ERROR;
+      case HTTP_STATUS.NOT_FOUND:
+        return API_ERROR_TYPES.NOT_FOUND_ERROR;
+      case HTTP_STATUS.TOO_MANY_REQUESTS:
+        return API_ERROR_TYPES.TIMEOUT_ERROR;
+      case HTTP_STATUS.INTERNAL_SERVER_ERROR:
+      case HTTP_STATUS.BAD_GATEWAY:
+      case HTTP_STATUS.SERVICE_UNAVAILABLE:
+        return API_ERROR_TYPES.SERVER_ERROR;
+      default:
+        return API_ERROR_TYPES.UNKNOWN_ERROR;
     }
   }
 }
 
-export const tokenManager = new TokenManager()
+// JWT token management (currently disabled for initial setup)
+class TokenManager {
+  private tokenKey = 'amp_jwt_token';
+  private isAuthEnabled = false; // Temporarily disabled
+
+  getToken(): string | null {
+    if (!this.isAuthEnabled) return null;
+    return localStorage.getItem(this.tokenKey);
+  }
+
+  setToken(token: string): void {
+    localStorage.setItem(this.tokenKey, token);
+  }
+
+  removeToken(): void {
+    localStorage.removeItem(this.tokenKey);
+  }
+
+  isTokenValid(): boolean {
+    if (!this.isAuthEnabled) return true; // Allow all requests when auth is disabled
+    
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      // Parse JWT payload (basic validation)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const now = Date.now() / 1000;
+      
+      // Check if token is expired
+      return payload.exp > now;
+    } catch {
+      return false;
+    }
+  }
+
+  // Enable/disable authentication for testing
+  setAuthEnabled(enabled: boolean): void {
+    this.isAuthEnabled = enabled;
+    if (isDevelopment()) {
+      console.log(`🔐 Authentication ${enabled ? 'enabled' : 'disabled'}`);
+    }
+  }
+
+  getAuthStatus(): boolean {
+    return this.isAuthEnabled;
+  }
+}
+
+export const tokenManager = new TokenManager();
+
+// Request retry configuration
+interface RetryConfig {
+  maxRetries: number;
+  retryDelay: number;
+  retryCondition: (error: HTTPError) => boolean;
+}
+
+const defaultRetryConfig: RetryConfig = {
+  maxRetries: 3,
+  retryDelay: 1000,
+  retryCondition: (error: HTTPError) => {
+    // Retry on network errors and 5xx server errors
+    return error.status === 0 || (error.status >= 500 && error.status < 600);
+  }
+};
 
 // HTTP client class
 class ApiClient {
-  private baseURL: string
+  private baseURL: string;
+  private timeout: number;
+  private defaultHeaders: Record<string, string>;
+  private retryConfig: RetryConfig;
 
-  constructor(baseURL: string) {
-    this.baseURL = baseURL
+  constructor(config = apiConfig) {
+    this.baseURL = config.baseURL;
+    this.timeout = config.timeout;
+    this.defaultHeaders = { ...config.headers };
+    this.retryConfig = defaultRetryConfig;
+  }
+
+  private async requestWithRetry<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    retryCount = 0
+  ): Promise<T> {
+    try {
+      return await this.request<T>(endpoint, options);
+    } catch (error) {
+      if (error instanceof HTTPError && 
+          retryCount < this.retryConfig.maxRetries && 
+          this.retryConfig.retryCondition(error)) {
+        
+        if (isDevelopment()) {
+          console.warn(`🔄 Retrying request (${retryCount + 1}/${this.retryConfig.maxRetries}):`, endpoint);
+        }
+        
+        await this.delay(this.retryConfig.retryDelay * Math.pow(2, retryCount));
+        return this.requestWithRetry<T>(endpoint, options, retryCount + 1);
+      }
+      throw error;
+    }
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`
+    const url = `${this.baseURL}${endpoint}`;
     
     // Prepare headers
-    const headers = new Headers(options.headers)
+    const headers = new Headers();
     
-    // Add JWT token if available
-    const token = tokenManager.getToken()
-    if (token && tokenManager.isTokenValid()) {
-      headers.set('Authorization', `Bearer ${token}`)
+    // Add default headers
+    Object.entries(this.defaultHeaders).forEach(([key, value]) => {
+      headers.set(key, value);
+    });
+    
+    // Add custom headers from options
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          headers.set(key, value);
+        }
+      });
     }
     
-    // Set default content type for non-GET requests
-    if (options.method && options.method !== 'GET' && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json')
+    // Add JWT token if available and auth is enabled
+    if (tokenManager.getAuthStatus()) {
+      const token = tokenManager.getToken();
+      if (token && tokenManager.isTokenValid()) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
     }
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
       const response = await fetch(url, {
         ...options,
         headers,
-      })
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
 
       // Handle HTTP errors
       if (!response.ok) {
-        let errorData
+        let errorData;
         try {
-          errorData = await response.json()
+          errorData = await response.json();
         } catch {
-          errorData = await response.text()
+          try {
+            errorData = await response.text();
+          } catch {
+            errorData = null;
+          }
         }
         
-        throw new HTTPError(response.status, response.statusText, errorData)
+        throw new HTTPError(response.status, response.statusText, errorData);
       }
 
       // Handle empty responses
-      const contentType = response.headers.get('content-type')
+      const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/json')) {
-        return '' as T
+        return '' as T;
       }
 
-      return await response.json()
+      return await response.json();
     } catch (error) {
+      clearTimeout(timeoutId);
+      
       // Re-throw HTTPError as-is
       if (error instanceof HTTPError) {
-        throw error
+        throw error;
+      }
+      
+      // Handle abort errors (timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new HTTPError(0, 'Request Timeout', error, API_ERROR_TYPES.TIMEOUT_ERROR);
       }
       
       // Handle network errors
-      throw new HTTPError(0, 'Network Error', error)
+      throw new HTTPError(0, 'Network Error', error, API_ERROR_TYPES.NETWORK_ERROR);
     }
   }
 
-  // HTTP methods
-  async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(endpoint, this.baseURL)
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // HTTP methods with retry support
+  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const url = new URL(endpoint, this.baseURL);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, value)
-      })
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach(v => url.searchParams.append(key, String(v)));
+          } else {
+            url.searchParams.append(key, String(value));
+          }
+        }
+      });
     }
     
-    return this.request<T>(url.pathname + url.search)
+    return this.requestWithRetry<T>(url.pathname + url.search);
   }
 
   async post<T>(endpoint: string, data?: any): Promise<T> {
-    return this.request<T>(endpoint, {
+    return this.requestWithRetry<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    })
+    });
   }
 
   async put<T>(endpoint: string, data?: any): Promise<T> {
-    return this.request<T>(endpoint, {
+    return this.requestWithRetry<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
-    })
+    });
   }
 
   async patch<T>(endpoint: string, data?: any): Promise<T> {
-    return this.request<T>(endpoint, {
+    return this.requestWithRetry<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
-    })
+    });
   }
 
   async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, {
+    return this.requestWithRetry<T>(endpoint, {
       method: 'DELETE',
-    })
+    });
+  }
+
+  // Utility methods
+  setRetryConfig(config: Partial<RetryConfig>): void {
+    this.retryConfig = { ...this.retryConfig, ...config };
+  }
+
+  getBaseURL(): string {
+    return this.baseURL;
+  }
+
+  updateBaseURL(baseURL: string): void {
+    this.baseURL = baseURL;
+    if (isDevelopment()) {
+      console.log(`🔗 API Base URL updated to: ${baseURL}`);
+    }
   }
 }
 
 // Create and export the default API client
-export const apiClient = new ApiClient(API_BASE_URL)
+export const apiClient = new ApiClient();
 
 // Export types and utilities
 export { HTTPError }

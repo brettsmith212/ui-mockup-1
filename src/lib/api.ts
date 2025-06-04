@@ -101,6 +101,14 @@ class TokenManager {
     }
   }
 
+  // Development helper to force bypass auth
+  forceBypassAuth(): void {
+    this.isAuthEnabled = false;
+    if (isDevelopment()) {
+      console.log('🔓 Authentication force bypassed for development');
+    }
+  }
+
   getAuthStatus(): boolean {
     return this.isAuthEnabled;
   }

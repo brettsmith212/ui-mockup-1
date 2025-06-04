@@ -170,7 +170,7 @@
   - **Step Dependencies**: Step 6
   - **User Instructions**: Verify real-time updates work when tasks change status
 
-- [ ] Step 14: Integrate Real-time Updates in Components
+- [x] Step 14: Integrate Real-time Updates in Components
   - **Task**: Connect WebSocket events to dashboard and task detail components for live updates
   - **Description**: Wires up the real-time updates to automatically refresh task status, stream logs, and update thread messages without user interaction
   - **Files**:

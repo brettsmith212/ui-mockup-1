@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Send, Loader2 } from 'lucide-react'
 import { MessageBubble } from './MessageBubble'
 import { Button, Textarea } from '@/components/ui'
+import { useRealtimeTaskUpdatesByTaskId } from '@/hooks/useRealtimeTaskUpdates'
 import type { ThreadMessage } from '@/types/task'
 
 interface ThreadViewProps {
@@ -13,6 +14,7 @@ interface ThreadViewProps {
 }
 
 export function ThreadView({ 
+  taskId,
   messages, 
   isLoading = false, 
   onSendMessage,
@@ -22,6 +24,17 @@ export function ThreadView({
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Real-time message updates
+  const { isConnected: wsConnected } = useRealtimeTaskUpdatesByTaskId(taskId, {
+    onNewMessage: (receivedTaskId, message) => {
+      // New messages are automatically handled by TanStack Query cache updates
+      console.log(`New message for task ${receivedTaskId}:`, message)
+    }
+  })
+
+  // Use WebSocket connection status if available, otherwise fall back to prop
+  const connectionStatus = wsConnected ?? isConnected
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -55,12 +68,12 @@ export function ThreadView({
   }
 
   const getConnectionStatus = () => {
-    if (!isConnected) {
+    if (!connectionStatus) {
       return (
         <div className="flex items-center justify-center p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg mb-4">
           <div className="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
             <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-            <span className="text-sm">Connecting to task...</span>
+            <span className="text-sm">Connecting to real-time updates...</span>
           </div>
         </div>
       )
@@ -119,11 +132,11 @@ export function ThreadView({
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                isConnected 
+                connectionStatus 
                   ? "Type a message to continue the task... (⌘/Ctrl + Enter to send)"
                   : "Connecting..."
               }
-              disabled={!isConnected || isSending}
+              disabled={!connectionStatus || isSending}
               resize={false}
               rows={3}
               className="resize-none"
@@ -131,7 +144,7 @@ export function ThreadView({
           </div>
           <Button 
             onClick={handleSend}
-            disabled={!newMessage.trim() || !isConnected || isSending}
+            disabled={!newMessage.trim() || !connectionStatus || isSending}
             className="self-end"
             icon={isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           >

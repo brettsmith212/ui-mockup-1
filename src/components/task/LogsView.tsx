@@ -9,6 +9,7 @@ import {
   formatLogMessage 
 } from '@/utils/terminal';
 import { useTaskLogs } from '@/hooks/useTaskLogs';
+import { useRealtimeTaskUpdatesByTaskId } from '@/hooks/useRealtimeTaskUpdates';
 import Button from '@/components/ui/Button';
 import { PlayIcon, PauseIcon, TrashIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import '@xterm/xterm/css/xterm.css';
@@ -27,6 +28,24 @@ export const LogsView: React.FC<LogsViewProps> = ({ taskId, className = '' }) =>
   const prevLogsRef = useRef<string[]>([]);
 
   const { data: logs, isLoading, error } = useTaskLogs(taskId, isStreaming);
+
+  // Real-time log updates
+  const { isConnected } = useRealtimeTaskUpdatesByTaskId(taskId, {
+    onNewLogs: (receivedTaskId, logLine) => {
+      if (terminalInstance.current && isStreaming) {
+        // Determine log level from the line content
+        const level = logLine.includes('ERROR') ? 'error' :
+                     logLine.includes('WARN') ? 'warn' :
+                     logLine.includes('DEBUG') ? 'debug' : 'info';
+        
+        writeToTerminal(terminalInstance.current, logLine, level);
+        
+        if (autoScroll) {
+          terminalInstance.current.scrollToBottom();
+        }
+      }
+    }
+  });
 
   // Initialize terminal
   useEffect(() => {
@@ -191,9 +210,11 @@ export const LogsView: React.FC<LogsViewProps> = ({ taskId, className = '' }) =>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <span>Lines: {logs?.totalLines || 0}</span>
-            <span className={`flex items-center space-x-1 ${isStreaming ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-2 h-2 rounded-full ${isStreaming ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span>{isStreaming ? 'Streaming' : 'Paused'}</span>
+            <span className={`flex items-center space-x-1 ${isStreaming && isConnected ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-2 h-2 rounded-full ${isStreaming && isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span>
+                {isConnected ? (isStreaming ? 'Live' : 'Paused') : 'Disconnected'}
+              </span>
             </span>
           </div>
           <div>

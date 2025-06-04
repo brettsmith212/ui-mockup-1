@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { ChevronUp, ChevronDown, MoreHorizontal, Eye, Edit, Trash2, CheckSquare } from 'lucide-react'
+import { ChevronUp, ChevronDown, MoreHorizontal, Eye, Edit, Trash2, CheckSquare, Wifi, WifiOff } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { useTasks } from '@/hooks/useTasks'
 import { useTaskFilters } from '@/hooks/useTaskFilters'
+import { useRealtimeTaskUpdates } from '@/hooks/useRealtimeTaskUpdates'
 import { Button, PulseSkeleton } from '@/components/ui'
 import TaskRow, { TaskRowSkeleton } from './TaskRow'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,13 @@ const columns: TableColumn[] = [
 export default function TaskTable() {
   const { apiParams } = useTaskFilters()
   const { data: taskList, isLoading, error, refetch } = useTasks(apiParams)
+  
+  // Real-time updates
+  const { isConnected, isReconnecting } = useRealtimeTaskUpdates({
+    onTaskStatusChange: (taskId, status) => {
+      console.log(`Task ${taskId} status changed to ${status}`)
+    }
+  })
   
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
@@ -124,10 +132,37 @@ export default function TaskTable() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 Tasks
               </h3>
-              {/* Mock data indicator - remove when using real API */}
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                Demo Data
-              </span>
+              {/* Connection status indicator */}
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                  Demo Data
+                </span>
+                <div className={cn(
+                  "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium gap-1",
+                  isConnected 
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                    : isReconnecting
+                    ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+                    : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                )}>
+                  {isConnected ? (
+                    <>
+                      <Wifi className="h-3 w-3" />
+                      Live
+                    </>
+                  ) : isReconnecting ? (
+                    <>
+                      <WifiOff className="h-3 w-3" />
+                      Reconnecting
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="h-3 w-3" />
+                      Offline
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {isLoading ? (

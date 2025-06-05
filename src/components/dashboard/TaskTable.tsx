@@ -10,7 +10,7 @@ import { Button, PulseSkeleton } from '@/components/ui'
 import TaskRow, { TaskRowSkeleton } from './TaskRow'
 import { cn } from '@/lib/utils'
 
-type SortField = 'status' | 'repo' | 'branch' | 'owner' | 'attempts' | 'updatedAt'
+type SortField = 'status' | 'repo' | 'branch' | 'prompt' | 'owner' | 'attempts' | 'prState' | 'updatedAt'
 
 interface TableColumn {
   key: SortField
@@ -23,10 +23,10 @@ const columns: TableColumn[] = [
   { key: 'status', label: 'Status', sortable: true },
   { key: 'repo', label: 'Repository', sortable: true },
   { key: 'branch', label: 'Branch', sortable: true },
-  { key: 'owner', label: 'Prompt', sortable: false },
+  { key: 'prompt' as SortField, label: 'Prompt', sortable: false },
   { key: 'owner', label: 'Owner', sortable: true },
   { key: 'attempts', label: 'Attempts', sortable: true, className: 'text-center' },
-  { key: 'status', label: 'PR State', sortable: false },
+  { key: 'prState' as SortField, label: 'PR State', sortable: false },
   { key: 'updatedAt', label: 'Last Update', sortable: true },
 ]
 
@@ -51,13 +51,26 @@ export default function TaskTable() {
     if (!taskList?.tasks) return []
     
     return [...taskList.tasks].sort((a, b) => {
-      let aValue: any = a[sortField]
-      let bValue: any = b[sortField]
+      let aValue: any
+      let bValue: any
       
-      // Handle special cases
-      if (sortField === 'updatedAt') {
-        aValue = new Date(a.updatedAt).getTime()
-        bValue = new Date(b.updatedAt).getTime()
+      // Map sort field to actual task property
+      switch (sortField) {
+        case 'prompt':
+          aValue = a.prompt
+          bValue = b.prompt
+          break
+        case 'prState':
+          aValue = a.prState || ''
+          bValue = b.prState || ''
+          break
+        case 'updatedAt':
+          aValue = new Date(a.updatedAt).getTime()
+          bValue = new Date(b.updatedAt).getTime()
+          break
+        default:
+          aValue = a[sortField]
+          bValue = b[sortField]
       }
       
       if (typeof aValue === 'string') {

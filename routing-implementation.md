@@ -31,15 +31,16 @@
 - [x] Step 3: Replace Mock Task Data with Real API
 
   - **Task**: Connect the task list, creation, and detail views to real Amp Orchestrator endpoints
-  - **Description**: Replace all mock task data with real API calls, update data fetching hooks, and ensure proper loading states
+  - **Description**: Replace all mock task data with real API calls, update data fetching hooks, and ensure proper loading states. Updated to use improved API contract with proper pagination, filtering, and task actions.
   - **Files**:
-    - `src/api/tasks.ts`: Implement real task API calls (without auth headers)
-    - `src/hooks/useTasks.ts`: Update to use real API endpoints
-    - `src/hooks/useTaskDetail.ts`: Connect to real task detail endpoint
-    - `src/hooks/useCreateTask.ts`: Update task creation with real API
+    - `src/api/tasks.ts`: ✅ Updated to use new API endpoints (pagination, filtering, task actions)
+    - `src/hooks/useTasks.ts`: ✅ Already using real API endpoints
+    - `src/hooks/useTaskDetail.ts`: ✅ Already using real API endpoints  
+    - `src/hooks/useCreateTask.ts`: ✅ Updated for new API format
     - `MOCK_DATA.md`: Document transition from mock to real data
   - **Step Dependencies**: Step 2
-  - **User Instructions**: Verify task data loads correctly from Amp Orchestrator
+  - **User Instructions**: ✅ Task data loads correctly, task actions (stop, continue, interrupt, abort, retry) now available
+  - **API Improvements**: Now supports proper pagination, filtering by status/date, task metadata (title, description, tags), and all task lifecycle actions
 
 - [ ] Step 4: Implement Task Actions Integration
 

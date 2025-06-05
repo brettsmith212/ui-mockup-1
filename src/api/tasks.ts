@@ -39,20 +39,22 @@ if (isDevelopment()) {
 
 // Utility functions for API responses
 export const transformTaskResponse = (apiTask: any): Task => {
-  // Map the actual API response format to our Task interface
+  // Map the new API response format to our Task interface
   return {
     id: apiTask.id,
     repo: apiTask.repo || 'Unknown', // fallback if missing
     branch: apiTask.branch || 'main', // fallback if missing
     status: mapApiStatus(apiTask.status),
-    prompt: apiTask.prompt || 'No prompt available', // fallback if missing
+    prompt: apiTask.prompt || apiTask.message || 'No prompt available', // fallback if missing
     attempts: apiTask.attempts || 1, // fallback if missing
     createdAt: apiTask.started || apiTask.createdAt || new Date().toISOString(),
     updatedAt: apiTask.updated || apiTask.updatedAt || apiTask.started || new Date().toISOString(),
     owner: apiTask.owner || 'Unknown', // fallback if missing
     prUrl: apiTask.prUrl || apiTask.pr_url,
     prState: apiTask.prState || apiTask.pr_state,
-    title: apiTask.title || (apiTask.prompt ? apiTask.prompt.slice(0, 50) + (apiTask.prompt.length > 50 ? '...' : '') : `Task ${apiTask.id}`),
+    title: apiTask.title || (apiTask.prompt || apiTask.message ? 
+      (apiTask.prompt || apiTask.message).slice(0, 50) + ((apiTask.prompt || apiTask.message).length > 50 ? '...' : '') : 
+      `Task ${apiTask.id}`),
     description: apiTask.description,
     tags: apiTask.tags || [],
   };
@@ -61,20 +63,18 @@ export const transformTaskResponse = (apiTask: any): Task => {
 // Map API status to our TaskStatus type
 function mapApiStatus(apiStatus: string): Task['status'] {
   switch (apiStatus?.toLowerCase()) {
-    case 'stopped':
     case 'completed':
       return 'success';
+    case 'stopped':
+      return 'success'; // Treat stopped as success for now
     case 'running':
-    case 'active':
       return 'running';
     case 'failed':
-    case 'error':
       return 'error';
     case 'aborted':
-    case 'cancelled':
       return 'aborted';
-    case 'paused':
-      return 'paused';
+    case 'interrupted':
+      return 'paused'; // Map interrupted to paused
     case 'queued':
     case 'pending':
       return 'queued';
@@ -104,16 +104,38 @@ export const getTasks = async (params?: TaskListParams): Promise<TaskListRespons
       console.log('🔍 API Client base URL:', apiClient.getBaseURL());
     }
 
-    const response = await apiClient.get(API_ENDPOINTS.TASKS.LIST) as any;
+    // Build query parameters for the new API
+    const queryParams: Record<string, any> = {};
     
-    // Handle plain array response from current API
-    const tasksArray = Array.isArray(response) ? response : (response?.data || []);
+    if (params?.limit) queryParams.limit = params.limit;
+    if (params?.page && params.page > 1) {
+      // For now, we'll use offset-based pagination as a fallback
+      // The API supports cursor-based pagination which is better
+      queryParams.offset = (params.page - 1) * (params.limit || 50);
+    }
+    if (params?.status?.length) {
+      queryParams.status = params.status.join(',');
+    }
+    if (params?.sortBy) {
+      queryParams.sort_by = params.sortBy === 'updatedAt' ? 'started' : params.sortBy;
+    }
+    if (params?.sortDirection) {
+      queryParams.sort_order = params.sortDirection;
+    }
+    if (params?.dateRange) {
+      queryParams.started_after = params.dateRange.start;
+      queryParams.started_before = params.dateRange.end;
+    }
+
+    const response = await apiClient.get(API_ENDPOINTS.TASKS.LIST, queryParams) as any;
     
     if (isDevelopment()) {
-      console.log('📋 Raw API response:', tasksArray);
+      console.log('📋 Raw API response:', response);
     }
     
-    const transformedTasks = tasksArray.map(transformTaskResponse);
+    // Handle new API response format: { tasks, next_cursor, has_more, total }
+    const tasks = response.tasks || [];
+    const transformedTasks = tasks.map(transformTaskResponse);
     
     if (isDevelopment()) {
       console.log('📋 Transformed tasks:', transformedTasks);
@@ -121,10 +143,10 @@ export const getTasks = async (params?: TaskListParams): Promise<TaskListRespons
     
     return {
       tasks: transformedTasks,
-      totalCount: transformedTasks.length,
-      page: 1,
-      limit: 50,
-      hasMore: false,
+      totalCount: response.total || transformedTasks.length,
+      page: params?.page || 1,
+      limit: params?.limit || 50,
+      hasMore: response.has_more || false,
     };
   } catch (error) {
     if (isDevelopment()) {
@@ -151,17 +173,28 @@ export const getTask = async (taskId: string): Promise<Task> => {
   try {
     if (isDevelopment()) {
       console.log(`🔍 Fetching task: ${taskId}`);
+      console.log(`🔍 Backend doesn't have individual task endpoints yet, fetching from task list`);
     }
 
-    const response = await apiClient.get<ApiResponse<Task>>(
-      API_ENDPOINTS.TASKS.GET(taskId)
-    );
-    return transformTaskResponse(response.data);
+    // Workaround: Backend doesn't have individual task endpoints yet
+    // So we fetch all tasks and find the one we need
+    const tasksResponse = await getTasks();
+    const task = tasksResponse.tasks.find(t => t.id === taskId);
+    
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`);
+    }
+    
+    if (isDevelopment()) {
+      console.log(`✅ Found task ${taskId}:`, task);
+    }
+    
+    return task;
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to fetch task ${taskId}:`, error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
@@ -172,16 +205,45 @@ export const createTask = async (request: CreateTaskRequest): Promise<Task> => {
       console.log('📝 Creating task:', request);
     }
 
-    const response = await apiClient.post<ApiResponse<Task>>(
+    // Map our request format to the API's expected format
+    const apiRequest = {
+      message: request.prompt, // API expects 'message' field
+      // Note: API doesn't support title, description, tags in creation yet
+      // These would need to be updated via PATCH after creation
+    };
+
+    const response = await apiClient.post(
       API_ENDPOINTS.TASKS.CREATE, 
-      request
-    );
-    return transformTaskResponse(response.data);
+      apiRequest
+    ) as any;
+    
+    const createdTask = transformTaskResponse(response);
+    
+    // If we have title, description, or tags, update them via PATCH
+    if (request.title || request.description || request.tags?.length) {
+      const updateRequest: any = {};
+      if (request.title) updateRequest.title = request.title;
+      if (request.description) updateRequest.description = request.description;
+      if (request.tags?.length) updateRequest.tags = request.tags;
+      
+      try {
+        const updatedTask = await updateTask(createdTask.id, updateRequest);
+        return updatedTask;
+      } catch (updateError) {
+        if (isDevelopment()) {
+          console.warn('⚠️ Failed to update task metadata after creation:', updateError);
+        }
+        // Return the created task even if metadata update failed
+        return createdTask;
+      }
+    }
+    
+    return createdTask;
   } catch (error) {
     if (isDevelopment()) {
       console.error('❌ Failed to create task:', error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
@@ -192,16 +254,17 @@ export const updateTask = async (taskId: string, request: UpdateTaskRequest): Pr
       console.log(`✏️ Updating task ${taskId}:`, request);
     }
 
-    const response = await apiClient.patch<ApiResponse<Task>>(
+    const response = await apiClient.patch(
       API_ENDPOINTS.TASKS.UPDATE(taskId), 
       request
-    );
-    return transformTaskResponse(response.data);
+    ) as any;
+    
+    return transformTaskResponse(response);
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to update task ${taskId}:`, error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
@@ -251,75 +314,104 @@ export const continueTask = async (taskId: string, prompt: string): Promise<Task
       console.log(`▶️ Continuing task ${taskId} with prompt:`, prompt);
     }
 
-    const response = await apiClient.post<ApiResponse<Task>>(
+    await apiClient.post(
       API_ENDPOINTS.TASK_ACTIONS.CONTINUE(taskId), 
-      { prompt }
+      { message: prompt } // API expects 'message' field
     );
-    return transformTaskResponse(response.data);
+    
+    // The continue API returns 202 Accepted, so we need to fetch the updated task
+    return await getTask(taskId);
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to continue task ${taskId}:`, error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
-// Interrupt task and restart with new prompt
-export const interruptTask = async (taskId: string, prompt: string): Promise<Task> => {
+// Interrupt task (graceful interruption with SIGINT)
+export const interruptTask = async (taskId: string): Promise<Task> => {
   try {
     if (isDevelopment()) {
-      console.log(`⏸️ Interrupting task ${taskId} with new prompt:`, prompt);
+      console.log(`⏸️ Interrupting task ${taskId}`);
     }
 
-    const response = await apiClient.post<ApiResponse<Task>>(
-      API_ENDPOINTS.TASK_ACTIONS.INTERRUPT(taskId), 
-      { prompt }
+    await apiClient.post(
+      API_ENDPOINTS.TASK_ACTIONS.INTERRUPT(taskId)
     );
-    return transformTaskResponse(response.data);
+    
+    // The interrupt API returns 202 Accepted, so we need to fetch the updated task
+    return await getTask(taskId);
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to interrupt task ${taskId}:`, error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
-// Abort task
+// Abort task (force terminate with SIGKILL)
 export const abortTask = async (taskId: string, reason?: string): Promise<Task> => {
   try {
     if (isDevelopment()) {
       console.log(`🛑 Aborting task ${taskId}${reason ? ` with reason: ${reason}` : ''}`);
     }
 
-    const response = await apiClient.post<ApiResponse<Task>>(
-      API_ENDPOINTS.TASK_ACTIONS.ABORT(taskId), 
-      { reason }
+    await apiClient.post(
+      API_ENDPOINTS.TASK_ACTIONS.ABORT(taskId)
+      // Note: API doesn't support reason parameter in abort endpoint
     );
-    return transformTaskResponse(response.data);
+    
+    // The abort API returns 202 Accepted, so we need to fetch the updated task
+    return await getTask(taskId);
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to abort task ${taskId}:`, error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
-// Retry task
-export const retryTask = async (taskId: string): Promise<Task> => {
+// Stop task
+export const stopTask = async (taskId: string): Promise<Task> => {
   try {
     if (isDevelopment()) {
-      console.log(`🔄 Retrying task: ${taskId}`);
+      console.log(`⏹️ Stopping task: ${taskId}`);
     }
 
-    const response = await apiClient.post<ApiResponse<Task>>(
-      API_ENDPOINTS.TASK_ACTIONS.RETRY(taskId)
+    await apiClient.post(`/api/tasks/${taskId}/stop`);
+    
+    // The stop API returns 202 Accepted, so we need to fetch the updated task
+    return await getTask(taskId);
+  } catch (error) {
+    if (isDevelopment()) {
+      console.error(`❌ Failed to stop task ${taskId}:`, error);
+    }
+    throw error;
+  }
+};
+
+// Retry task with new message
+export const retryTask = async (taskId: string, message?: string): Promise<Task> => {
+  try {
+    if (isDevelopment()) {
+      console.log(`🔄 Retrying task: ${taskId}${message ? ` with message: ${message}` : ''}`);
+    }
+
+    const requestBody = message ? { message } : { message: 'Retry task' };
+    
+    await apiClient.post(
+      API_ENDPOINTS.TASK_ACTIONS.RETRY(taskId),
+      requestBody
     );
-    return transformTaskResponse(response.data);
+    
+    // The retry API returns 202 Accepted, so we need to fetch the updated task
+    return await getTask(taskId);
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to retry task ${taskId}:`, error);
     }
-    return handleApiError(error);
+    throw error;
   }
 };
 
@@ -488,6 +580,7 @@ export const taskApi = {
   updateTask,
   deleteTask,
   performTaskAction,
+  stopTask,
   continueTask,
   interruptTask,
   abortTask,

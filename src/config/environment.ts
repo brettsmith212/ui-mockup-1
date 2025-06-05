@@ -22,9 +22,10 @@ export function getEnvironment(): Environment {
   const nodeEnv = import.meta.env.NODE_ENV as Environment['NODE_ENV'] || 'development';
   
   // Default API URL based on environment
+  // In development, use relative URLs to leverage Vite proxy
   const defaultApiUrl = nodeEnv === 'production' 
     ? 'https://api.amp-orchestrator.com' 
-    : 'http://localhost:8080';
+    : (typeof window !== 'undefined' ? '' : 'http://localhost:8080');
     
   // Default WebSocket URL based on API URL
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || defaultApiUrl;

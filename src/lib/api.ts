@@ -260,20 +260,28 @@ class ApiClient {
 
   // HTTP methods with retry support
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const url = new URL(endpoint, this.baseURL);
+    let finalEndpoint = endpoint;
+    
+    // Handle query parameters
     if (params) {
+      const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
-            value.forEach(v => url.searchParams.append(key, String(v)));
+            value.forEach(v => searchParams.append(key, String(v)));
           } else {
-            url.searchParams.append(key, String(value));
+            searchParams.append(key, String(value));
           }
         }
       });
+      
+      const queryString = searchParams.toString();
+      if (queryString) {
+        finalEndpoint += (endpoint.includes('?') ? '&' : '?') + queryString;
+      }
     }
     
-    return this.requestWithRetry<T>(url.pathname + url.search);
+    return this.requestWithRetry<T>(finalEndpoint);
   }
 
   async post<T>(endpoint: string, data?: any): Promise<T> {

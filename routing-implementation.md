@@ -3,6 +3,7 @@
 ## Core Infrastructure Setup
 
 - [x] Step 1: Update API Client Configuration
+
   - **Task**: Configure the API client to connect to the Amp Orchestrator server with proper base URL, timeout, and basic error handling (without authentication)
   - **Description**: Replace the placeholder API configuration with real server endpoints, basic error interceptors, and prepare for future auth integration
   - **Files**:
@@ -27,7 +28,8 @@
 
 ## Task Management Integration
 
-- [ ] Step 3: Replace Mock Task Data with Real API
+- [x] Step 3: Replace Mock Task Data with Real API
+
   - **Task**: Connect the task list, creation, and detail views to real Amp Orchestrator endpoints
   - **Description**: Replace all mock task data with real API calls, update data fetching hooks, and ensure proper loading states
   - **Files**:
@@ -40,6 +42,7 @@
   - **User Instructions**: Verify task data loads correctly from Amp Orchestrator
 
 - [ ] Step 4: Implement Task Actions Integration
+
   - **Task**: Connect task action buttons (continue, interrupt, abort, retry) to real Amp Orchestrator endpoints
   - **Description**: Implement real task state management, action handlers, and optimistic updates for better UX
   - **Files**:
@@ -64,6 +67,7 @@
 ## Real-time Integration
 
 - [ ] Step 6: Connect WebSocket to Amp Orchestrator
+
   - **Task**: Update WebSocket client to connect to the real Amp Orchestrator WebSocket endpoint (without authentication initially)
   - **Description**: Configure WebSocket connection with proper reconnection logic and event handling, prepare for future auth integration
   - **Files**:
@@ -88,6 +92,7 @@
 ## Data Integration and Validation
 
 - [ ] Step 8: Implement API Response Validation
+
   - **Task**: Add runtime validation for API responses to ensure data integrity and proper error handling
   - **Description**: Implement schema validation for API responses, handle malformed data gracefully, and add proper TypeScript type guards
   - **Files**:
@@ -112,6 +117,7 @@
 ## Performance and Optimization
 
 - [ ] Step 10: Implement Data Caching Strategy
+
   - **Task**: Optimize TanStack Query configuration for efficient data caching and background updates with real API
   - **Description**: Configure proper cache invalidation, background refetching, and stale-while-revalidate patterns for optimal performance
   - **Files**:
@@ -149,6 +155,7 @@
 ## Authentication Integration
 
 - [ ] Step 13: Implement Real Authentication
+
   - **Task**: Re-enable and implement real JWT-based authentication using the Amp Orchestrator auth endpoints
   - **Description**: Connect the auth system to real login/logout endpoints, implement token refresh, and add proper session management
   - **Files**:
@@ -173,6 +180,7 @@
 ## Testing and Quality Assurance
 
 - [ ] Step 15: Update Tests for Real API Integration
+
   - **Task**: Modify existing tests to work with real API integration and add integration tests
   - **Description**: Update component tests to mock real API calls, add integration tests for complete user flows
   - **Files**:
@@ -197,6 +205,7 @@
 ## Documentation and Deployment
 
 - [ ] Step 17: Update Documentation for Production
+
   - **Task**: Update all documentation to reflect the real API integration and deployment requirements
   - **Description**: Update README, API documentation, and deployment guides for production use with Amp Orchestrator
   - **Files**:

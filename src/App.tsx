@@ -2,7 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query-client'
-import { validateEnvironment, logEnvironment, isDevelopment } from '@/config/environment'
+import { validateEnvironment, logEnvironment, isDevelopment, env } from '@/config/environment'
 import { tokenManager } from '@/lib/api'
 import AppLayout from './components/layout/AppLayout'
 import Dashboard from './pages/Dashboard'
@@ -18,6 +18,10 @@ function App() {
       // Log environment in development
       if (isDevelopment()) {
         logEnvironment();
+        
+        // Debug: Log API config for troubleshooting
+        console.log('🔧 API Base URL:', env.API_BASE_URL);
+        console.log('🔧 Full API URL example:', `${env.API_BASE_URL}/api/tasks`);
         
         // Temporarily disable authentication for development
         tokenManager.forceBypassAuth();

@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createTask } from '../api/tasks';
+import { taskApi } from '../api/tasks';
+import { queryKeys } from '../lib/query-client';
 import { CreateTaskRequest, Task } from '../types/task';
 import { extractRepoInfo, sanitizeInput } from '../utils/validation';
+import { isDevelopment } from '../config/environment';
 
 interface CreateTaskData {
   repoUrl: string;
@@ -35,7 +37,10 @@ export const useCreateTask = () => {
       };
 
       try {
-        const response = await createTask(createRequest);
+        if (isDevelopment()) {
+          console.log('📝 Creating task with request:', createRequest);
+        }
+        const response = await taskApi.createTask(createRequest);
         return response;
       } catch (error: any) {
         if (error.response?.status === 400) {
@@ -57,17 +62,15 @@ export const useCreateTask = () => {
       }
     },
     onSuccess: (newTask) => {
-      // Invalidate and refetch tasks list
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      if (isDevelopment()) {
+        console.log('✅ Task created successfully:', newTask);
+      }
       
-      // Optimistically add the new task to the cache
-      queryClient.setQueryData(['tasks'], (oldTasks: Task[] | undefined) => {
-        if (!oldTasks) return [newTask];
-        return [newTask, ...oldTasks];
-      });
-
+      // Invalidate and refetch tasks list
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      
       // Set the individual task in cache
-      queryClient.setQueryData(['task', newTask.id], newTask);
+      queryClient.setQueryData(queryKeys.tasks.detail(newTask.id), newTask);
     },
     onError: (error) => {
       console.error('Task creation failed:', error);

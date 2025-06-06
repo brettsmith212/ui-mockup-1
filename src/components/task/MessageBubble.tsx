@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { User, Bot, Settings, ChevronRight, ChevronDown, Brain } from 'lucide-react'
+import { User, Bot, Settings, ChevronRight, ChevronDown, Brain, Wrench } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import type { ThreadMessage } from '@/types/task'
 
@@ -15,11 +15,23 @@ export function MessageBubble({ message, className = '' }: MessageBubbleProps) {
   const isThinking = message.metadata?.type === 'thinking' || 
     (message.role === 'amp' && message.content.toLowerCase().includes('thinking'))
 
+  // Check if this is a tool call message
+  const isToolCall = message.metadata?.type === 'tool_use' || message.metadata?.tool_name
+
   // Debug thinking message detection
   if (isThinking && process.env.NODE_ENV === 'development') {
     console.log('🧠 Detected thinking message:', { 
       role: message.role, 
       content: message.content.substring(0, 100),
+      metadata: message.metadata 
+    });
+  }
+
+  // Debug tool call detection
+  if (isToolCall && process.env.NODE_ENV === 'development') {
+    console.log('🔧 Detected tool call:', { 
+      role: message.role, 
+      content: message.content,
       metadata: message.metadata 
     });
   }
@@ -177,6 +189,73 @@ export function MessageBubble({ message, className = '' }: MessageBubbleProps) {
               <div className="px-3 pb-3 border-t border-amber-200 dark:border-amber-800/50">
                 <div className="pt-2">
                   <MarkdownRenderer content={message.content} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Special rendering for tool call messages
+  if (isToolCall) {
+    const toolContent = message.metadata?.input?.content;
+    const toolPath = message.metadata?.input?.path;
+    const toolName = message.metadata?.tool_name;
+
+    return (
+      <div className={`flex space-x-3 ${className}`}>
+        {/* Avatar */}
+        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <Wrench className="w-4 h-4 text-white" />
+        </div>
+
+        {/* Tool call content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              Amp
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatTimestamp(message.ts)}
+            </span>
+            {toolName && (
+              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-0.5 rounded">
+                {toolName}
+              </span>
+            )}
+          </div>
+
+          {/* Tool action bubble */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 max-w-4xl">
+            {/* Tool action description */}
+            <div className="mb-3">
+              <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                {message.content}
+              </p>
+              {toolPath && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  {toolPath}
+                </p>
+              )}
+            </div>
+
+            {/* Code content if available */}
+            {toolContent && (
+              <div className="border-t border-blue-200 dark:border-blue-800/50 pt-3">
+                <div className="bg-gray-900 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-800 border-b border-gray-700">
+                    <span className="text-xs text-gray-400 font-mono">
+                      {toolPath || 'Code'}
+                    </span>
+                  </div>
+                  <div className="p-3">
+                    <pre className="text-sm text-gray-100 overflow-x-auto">
+                      <code>{toolContent}</code>
+                    </pre>
+                  </div>
                 </div>
               </div>
             )}

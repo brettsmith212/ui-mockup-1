@@ -124,7 +124,7 @@ interface RetryConfig {
 }
 
 const defaultRetryConfig: RetryConfig = {
-  maxRetries: 3,
+  maxRetries: 0, // Disable retries for now to prevent duplicate requests
   retryDelay: 1000,
   retryCondition: (error: HTTPError) => {
     // Retry on network errors and 5xx server errors
@@ -152,8 +152,15 @@ class ApiClient {
     retryCount = 0
   ): Promise<T> {
     try {
+      if (isDevelopment()) {
+        console.log(`📡 Making request to: ${endpoint}`, { retryCount, options });
+      }
       return await this.request<T>(endpoint, options);
     } catch (error) {
+      if (isDevelopment()) {
+        console.error(`❌ Request failed:`, { endpoint, error, retryCount });
+      }
+      
       if (error instanceof HTTPError && 
           retryCount < this.retryConfig.maxRetries && 
           this.retryConfig.retryCondition(error)) {

@@ -11,13 +11,11 @@ interface TaskFormProps {
 }
 
 interface FormData {
-  repoUrl: string;
   prompt: string;
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState<FormData>({
-    repoUrl: '',
     prompt: ''
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -51,28 +49,31 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
     setErrors({});
 
     try {
+      console.log('🚀 Submitting task creation...');
       const task = await createTaskMutation.mutateAsync({
-        repoUrl: formData.repoUrl,
         prompt: formData.prompt
       });
+      
+      console.log('✅ Task created successfully:', task);
 
       // Reset form
-      setFormData({ repoUrl: '', prompt: '' });
+      setFormData({ prompt: '' });
       
       // Call success callback
       onSuccess?.(task.id);
     } catch (error: any) {
+      console.error('❌ Task creation failed:', error);
       if (error.field) {
         setErrors({ [error.field]: error.message });
       } else {
-        setErrors({ general: error.message });
+        setErrors({ general: error.message || 'Failed to create task' });
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const isFormValid = formData.repoUrl.trim() && formData.prompt.trim() && Object.keys(errors).length === 0;
+  const isFormValid = formData.prompt.trim() && Object.keys(errors).length === 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -84,25 +85,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="repoUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Repository URL
-          </label>
-          <Input
-            id="repoUrl"
-            type="url"
-            value={formData.repoUrl}
-            onChange={(e) => handleInputChange('repoUrl', e.target.value)}
-            placeholder="https://github.com/owner/repo or git@github.com:owner/repo.git"
-            error={errors.repoUrl}
-            disabled={isSubmitting}
-            className="w-full"
-          />
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Supports GitHub, GitLab, and Bitbucket repositories (HTTPS or SSH format)
-          </p>
-        </div>
-
-        <div>
           <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Initial Prompt
           </label>
@@ -110,7 +92,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
             id="prompt"
             value={formData.prompt}
             onChange={(e) => handleInputChange('prompt', e.target.value)}
-            placeholder="Describe what you want Amp to do with this repository..."
+            placeholder="Describe what you want Amp to do..."
             rows={4}
             disabled={isSubmitting}
             error={errors.prompt}

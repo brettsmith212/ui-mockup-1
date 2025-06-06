@@ -6,7 +6,6 @@ import { extractRepoInfo, sanitizeInput } from '../utils/validation';
 import { isDevelopment } from '../config/environment';
 
 interface CreateTaskData {
-  repoUrl: string;
   prompt: string;
 }
 
@@ -21,19 +20,11 @@ export const useCreateTask = () => {
   return useMutation<Task, CreateTaskError, CreateTaskData>({
     mutationFn: async (data: CreateTaskData) => {
       const sanitizedData = {
-        repoUrl: sanitizeInput(data.repoUrl),
         prompt: sanitizeInput(data.prompt)
       };
 
-      const repoInfo = extractRepoInfo(sanitizedData.repoUrl);
-      if (!repoInfo) {
-        throw { message: 'Invalid repository URL format', field: 'repoUrl' };
-      }
-
       const createRequest: CreateTaskRequest = {
-        repo: sanitizedData.repoUrl,
-        prompt: sanitizedData.prompt,
-        title: `Task for ${repoInfo.fullName}`
+        prompt: sanitizedData.prompt
       };
 
       try {

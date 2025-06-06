@@ -62,16 +62,10 @@ export const validatePrompt = (prompt: string): ValidationResult => {
 };
 
 export const validateTaskForm = (data: {
-  repoUrl: string;
   prompt: string;
 }): { isValid: boolean; errors: FormErrors } => {
   const errors: FormErrors = {};
   
-  const repoValidation = validateRepoUrl(data.repoUrl);
-  if (!repoValidation.isValid) {
-    errors.repoUrl = repoValidation.errors[0];
-  }
-
   const promptValidation = validatePrompt(data.prompt);
   if (!promptValidation.isValid) {
     errors.prompt = promptValidation.errors[0];

@@ -119,12 +119,7 @@ export interface CICheck {
 
 // Task creation and update types
 export interface CreateTaskRequest {
-  repo: string
   prompt: string
-  branch?: string           // auto-generated if not provided
-  title?: string
-  description?: string
-  tags?: string[]
 }
 
 export interface UpdateTaskRequest {

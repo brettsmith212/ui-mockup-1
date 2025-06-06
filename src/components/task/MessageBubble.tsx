@@ -1,4 +1,5 @@
-import { User, Bot, Settings } from 'lucide-react'
+import { useState } from 'react'
+import { User, Bot, Settings, ChevronRight, ChevronDown, Brain } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import type { ThreadMessage } from '@/types/task'
 
@@ -8,6 +9,21 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, className = '' }: MessageBubbleProps) {
+  const [isThinkingExpanded, setIsThinkingExpanded] = useState(false)
+
+  // Check if this is a thinking message
+  const isThinking = message.metadata?.type === 'thinking' || 
+    (message.role === 'amp' && message.content.toLowerCase().includes('thinking'))
+
+  // Debug thinking message detection
+  if (isThinking && process.env.NODE_ENV === 'development') {
+    console.log('🧠 Detected thinking message:', { 
+      role: message.role, 
+      content: message.content.substring(0, 100),
+      metadata: message.metadata 
+    });
+  }
+
   const getRoleConfig = (role: ThreadMessage['role']) => {
     switch (role) {
       case 'user':
@@ -116,6 +132,58 @@ export function MessageBubble({ message, className = '' }: MessageBubbleProps) {
       )
     }
     return null
+  }
+
+  // Special rendering for thinking messages
+  if (isThinking) {
+    return (
+      <div className={`flex space-x-3 ${className}`}>
+        {/* Avatar */}
+        <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <Brain className="w-4 h-4 text-white" />
+        </div>
+
+        {/* Thinking content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+              Thinking
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatTimestamp(message.ts)}
+            </span>
+          </div>
+
+          {/* Collapsible thinking box */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl overflow-hidden max-w-4xl">
+            {/* Toggle button */}
+            <button
+              onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+              className="w-full px-3 py-2 flex items-center space-x-2 text-left hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+            >
+              {isThinkingExpanded ? (
+                <ChevronDown className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              )}
+              <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                {isThinkingExpanded ? 'Hide thinking' : 'Show thinking'}
+              </span>
+            </button>
+
+            {/* Thinking content (collapsible) */}
+            {isThinkingExpanded && (
+              <div className="px-3 pb-3 border-t border-amber-200 dark:border-amber-800/50">
+                <div className="pt-2">
+                  <MarkdownRenderer content={message.content} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

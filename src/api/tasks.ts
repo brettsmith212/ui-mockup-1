@@ -528,38 +528,44 @@ export const getTaskThread = async (taskId: string, params?: TaskThreadQuery): P
       }
     }
     
-    // Transform backend format to our ThreadMessage format
-    const messages: ThreadMessage[] = response.messages.map((msg: any) => {
-      if (isDevelopment()) {
-        console.log('Raw message from backend:', msg);
-      }
-      
-      // Determine the correct role based on message type and content
-      let role: 'user' | 'amp' | 'system' = 'user';
-      
-      if (msg.type === 'assistant') {
-        role = 'amp';
-      } else if (msg.type === 'tool') {
-        role = 'amp'; // Tool calls should be shown as Amp
-      } else if (msg.type === 'system') {
-        // Check if this is a "Thread:" message which should be treated as the prompt
-        if (msg.content && msg.content.startsWith('Thread:')) {
-          role = 'user'; // Show thread title as user prompt
-        } else {
-          role = 'system';
+    // Transform backend format to our ThreadMessage format, filtering out Thread: messages
+    const messages: ThreadMessage[] = response.messages
+      .filter((msg: any) => {
+        // Filter out Thread: system messages since we use them as the title
+        if (msg.type === 'system' && msg.content && msg.content.startsWith('Thread:')) {
+          if (isDevelopment()) {
+            console.log('🚫 Filtering out Thread message from conversation:', msg.content);
+          }
+          return false;
         }
-      } else if (msg.type === 'user') {
-        role = 'user';
-      }
+        return true;
+      })
+      .map((msg: any) => {
+        if (isDevelopment()) {
+          console.log('Raw message from backend:', msg);
+        }
+        
+        // Determine the correct role based on message type and content
+        let role: 'user' | 'amp' | 'system' = 'user';
+        
+        if (msg.type === 'assistant') {
+          role = 'amp';
+        } else if (msg.type === 'tool') {
+          role = 'amp'; // Tool calls should be shown as Amp
+        } else if (msg.type === 'system') {
+          role = 'system';
+        } else if (msg.type === 'user') {
+          role = 'user';
+        }
 
-      return {
-        id: msg.id,
-        role,
-        content: msg.content,
-        ts: msg.timestamp,
-        metadata: msg.metadata,
-      };
-    });
+        return {
+          id: msg.id,
+          role,
+          content: msg.content,
+          ts: msg.timestamp,
+          metadata: msg.metadata,
+        };
+      });
 
     return messages;
   } catch (error) {

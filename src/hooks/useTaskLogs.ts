@@ -31,9 +31,9 @@ export const useTaskLogs = (taskId: string, enabled = true) => {
 export const useTaskLogsStream = (taskId: string, enabled = true) => {
   return useQuery({
     queryKey: ['task-logs-stream', taskId],
-    queryFn: () => taskApi.getLogsStream(taskId),
+    queryFn: () => taskApi.getTaskLogs(taskId, { tail: 50 }), // Get last 50 lines for streaming
     enabled,
-    refetchInterval: 500, // More frequent polling for streaming logs
+    refetchInterval: 1000, // Poll every second for new logs
     refetchIntervalInBackground: false,
     staleTime: 0, // Always consider streaming data stale
   });

@@ -15,15 +15,8 @@ export function useSendMessage(taskId: string) {
 
   return useMutation({
     mutationFn: async (messageContent: string) => {
-      // TODO: Implement real message sending
-      // For now, simulate sending a message
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // In a real implementation, this would call the API
-      // return taskApi.sendMessage(taskId, messageContent)
-      console.log('Sending message to task', taskId, ':', messageContent)
-      
-      return { success: true }
+      // Send message by continuing the task with the new prompt
+      return await taskApi.continueTask(taskId, messageContent)
     },
     onSuccess: () => {
       // Invalidate and refetch thread messages

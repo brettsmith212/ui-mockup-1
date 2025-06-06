@@ -115,8 +115,7 @@ export interface TaskListQuery {
 }
 
 export interface TaskLogsQuery {
-  page?: number
-  limit?: number
+  tail?: number            // Number of lines from end (backend specific)
   level?: string | string[]
   since?: string           // ISO timestamp
   search?: string
@@ -124,8 +123,8 @@ export interface TaskLogsQuery {
 }
 
 export interface TaskThreadQuery {
-  page?: number
   limit?: number
+  offset?: number
   since?: string           // ISO timestamp
   role?: string | string[]
 }

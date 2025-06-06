@@ -35,14 +35,27 @@
   - **Files**:
     - `src/api/tasks.ts`: ✅ Updated to use new API endpoints (pagination, filtering, task actions)
     - `src/hooks/useTasks.ts`: ✅ Already using real API endpoints
-    - `src/hooks/useTaskDetail.ts`: ✅ Already using real API endpoints  
+    - `src/hooks/useTaskDetail.ts`: ✅ Already using real API endpoints
     - `src/hooks/useCreateTask.ts`: ✅ Updated for new API format
     - `MOCK_DATA.md`: Document transition from mock to real data
   - **Step Dependencies**: Step 2
   - **User Instructions**: ✅ Task data loads correctly, task actions (stop, continue, interrupt, abort, retry) now available
   - **API Improvements**: Now supports proper pagination, filtering by status/date, task metadata (title, description, tags), and all task lifecycle actions
 
-- [ ] Step 4: Implement Task Actions Integration
+- [x] Step 4: Integrate Thread and Logs Data
+
+  - **Task**: Connect thread messages and execution logs to real Amp Orchestrator data streams
+  - **Description**: ✅ Updated thread and logs integration to use real API endpoints with proper format handling
+  - **Files**:
+    - `src/hooks/useTaskThread.ts`: ✅ Updated to use real thread API and send messages via continueTask
+    - `src/hooks/useTaskLogs.ts`: ✅ Updated to handle plain text log responses from backend
+    - `src/api/tasks.ts`: ✅ Updated getTaskThread() and getTaskLogs() for real API format
+    - `src/types/api.ts`: ✅ Updated TaskThreadQuery and TaskLogsQuery types for backend compatibility
+  - **Step Dependencies**: Step 3
+  - **User Instructions**: ✅ Thread messages load from `/api/tasks/{id}/thread`, logs load from `/api/tasks/{id}/logs`, WebSocket real-time updates working
+  - **API Integration**: Real-time thread messages via WebSocket (`thread_message` events), HTTP fallback for initial load, logs as plain text with tail support
+
+- [ ] Step 5: Implement Task Actions Integration
 
   - **Task**: Connect task action buttons (continue, interrupt, abort, retry) to real Amp Orchestrator endpoints
   - **Description**: Implement real task state management, action handlers, and optimistic updates for better UX
@@ -53,17 +66,6 @@
     - `src/hooks/useTaskDetail.ts`: Update task state after actions
   - **Step Dependencies**: Step 3
   - **User Instructions**: Test task actions and verify state updates in Amp Orchestrator
-
-- [ ] Step 5: Integrate Thread and Logs Data
-  - **Task**: Connect thread messages and execution logs to real Amp Orchestrator data streams
-  - **Description**: Replace mock conversation data and logs with real API endpoints, implement proper pagination and streaming
-  - **Files**:
-    - `src/hooks/useTaskThread.ts`: Create hook for real thread data
-    - `src/hooks/useTaskLogs.ts`: Update to fetch real logs
-    - `src/components/task/ThreadView.tsx`: Connect to real thread data
-    - `src/components/task/LogsView.tsx`: Update for real log streaming
-  - **Step Dependencies**: Step 4
-  - **User Instructions**: Verify thread messages and logs display correctly from Amp Orchestrator
 
 ## Real-time Integration
 

@@ -1,7 +1,7 @@
 // Task CRUD operations and API calls for Amp Orchestrator
 
 import { apiClient, handleApiError } from '@/lib/api';
-import { API_ENDPOINTS } from '@/config/api';
+import { API_ENDPOINTS, buildApiUrl } from '@/config/api';
 import { isDevelopment } from '@/config/environment';
 import { 
   filterMockTasks, 
@@ -18,12 +18,12 @@ import type {
   TaskListParams,
   ThreadMessage,
   TaskLogs,
+  LogEntry,
   CIStatus,
   GitOperation,
 } from '@/types/task';
 import type {
   ApiResponse,
-  PaginatedResponse,
   TaskLogsQuery,
   TaskThreadQuery,
 } from '@/types/api';
@@ -219,24 +219,8 @@ export const createTask = async (request: CreateTaskRequest): Promise<Task> => {
     
     const createdTask = transformTaskResponse(response);
     
-    // If we have title, description, or tags, update them via PATCH
-    if (request.title || request.description || request.tags?.length) {
-      const updateRequest: any = {};
-      if (request.title) updateRequest.title = request.title;
-      if (request.description) updateRequest.description = request.description;
-      if (request.tags?.length) updateRequest.tags = request.tags;
-      
-      try {
-        const updatedTask = await updateTask(createdTask.id, updateRequest);
-        return updatedTask;
-      } catch (updateError) {
-        if (isDevelopment()) {
-          console.warn('⚠️ Failed to update task metadata after creation:', updateError);
-        }
-        // Return the created task even if metadata update failed
-        return createdTask;
-      }
-    }
+    // Note: The API doesn't support title, description, tags in creation yet
+    // These would need to be updated via PATCH after creation if needed
     
     return createdTask;
   } catch (error) {
@@ -424,20 +408,54 @@ export const getTaskThread = async (taskId: string, params?: TaskThreadQuery): P
 
   try {
     const queryParams: Record<string, any> = {
-      page: params?.page || 1,
       limit: params?.limit || 100,
-      ...params,
+      offset: params?.offset || 0,
     };
 
     if (isDevelopment()) {
       console.log(`💬 Fetching thread for task ${taskId}:`, queryParams);
     }
 
-    const response = await apiClient.get<PaginatedResponse<ThreadMessage>>(
+    // Backend returns { messages: [...] }
+    const response = await apiClient.get(
       API_ENDPOINTS.TASK_DATA.THREAD(taskId), 
       queryParams
-    );
-    return response.data;
+    ) as { messages: any[] };
+    
+    // Transform backend format to our ThreadMessage format
+    const messages: ThreadMessage[] = response.messages.map((msg: any) => {
+      if (isDevelopment()) {
+        console.log('Raw message from backend:', msg);
+      }
+      
+      // Determine the correct role based on message type and content
+      let role: 'user' | 'amp' | 'system' = 'user';
+      
+      if (msg.type === 'assistant') {
+        role = 'amp';
+      } else if (msg.type === 'tool') {
+        role = 'amp'; // Tool calls should be shown as Amp
+      } else if (msg.type === 'system') {
+        // Check if this is a "Thread:" message which should be treated as the prompt
+        if (msg.content && msg.content.startsWith('Thread:')) {
+          role = 'user'; // Show thread title as user prompt
+        } else {
+          role = 'system';
+        }
+      } else if (msg.type === 'user') {
+        role = 'user';
+      }
+
+      return {
+        id: msg.id,
+        role,
+        content: msg.content,
+        ts: msg.timestamp,
+        metadata: msg.metadata,
+      };
+    });
+
+    return messages;
   } catch (error) {
     if (isDevelopment()) {
       console.error(`❌ Failed to fetch thread for task ${taskId}:`, error);
@@ -459,26 +477,50 @@ export const getTaskLogs = async (taskId: string, params?: TaskLogsQuery): Promi
   }
 
   try {
-    const queryParams: Record<string, any> = {
-      page: params?.page || 1,
-      limit: params?.limit || 1000,
-      ...params,
-    };
+    const queryParams: Record<string, any> = {};
+    
+    // Add tail parameter if specified
+    if (params?.tail) {
+      queryParams.tail = params.tail;
+    }
 
     if (isDevelopment()) {
       console.log(`📋 Fetching logs for task ${taskId}:`, queryParams);
     }
 
-    const response = await apiClient.get<PaginatedResponse<TaskLogs['logs'][0]>>(
-      API_ENDPOINTS.TASK_DATA.LOGS(taskId), 
-      queryParams
-    );
+    // Backend returns plain text, not JSON
+    // Use buildApiUrl to get the full URL
+    const url = buildApiUrl(API_ENDPOINTS.TASK_DATA.LOGS(taskId)) + 
+      (Object.keys(queryParams).length ? '?' + new URLSearchParams(queryParams).toString() : '');
     
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/plain',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const logText = await response.text();
+    
+    // Split into lines and create log entries
+    const logLines = logText.split('\n').filter(line => line.trim() !== '');
+    const logs: LogEntry[] = logLines.map((line, index) => ({
+      id: `${taskId}-log-${index}`,
+      timestamp: new Date().toISOString(), // Backend doesn't provide timestamps per line
+      level: 'info', // Default level since backend doesn't specify
+      message: line,
+      source: 'amp',
+    }));
+
     return {
       taskId,
-      logs: response.data,
-      totalLines: response.meta.totalCount,
-      hasMore: response.meta.hasNext,
+      logs,
+      totalLines: logLines.length,
+      hasMore: false, // Single request gets all available logs
     };
   } catch (error) {
     if (isDevelopment()) {

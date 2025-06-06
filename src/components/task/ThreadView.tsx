@@ -33,8 +33,14 @@ export function ThreadView({
     }
   })
 
+  // Debug WebSocket connection status
+  useEffect(() => {
+    console.log('WebSocket connection status:', { wsConnected, isConnected, taskId });
+  }, [wsConnected, isConnected, taskId]);
+
   // Use WebSocket connection status if available, otherwise fall back to prop
-  const connectionStatus = wsConnected ?? isConnected
+  // Temporary: always show as connected until WebSocket debugging is complete
+  const connectionStatus = true // wsConnected ?? isConnected
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

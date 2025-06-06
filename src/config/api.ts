@@ -61,9 +61,9 @@ export const API_ENDPOINTS = {
  * WebSocket endpoint configuration
  */
 export const WS_ENDPOINTS = {
-  TASKS: '/ws/tasks',
-  LOGS: (id: string) => `/ws/tasks/${id}/logs`,
-  THREAD: (id: string) => `/ws/tasks/${id}/thread`,
+  TASKS: '/api/ws',
+  LOGS: (id: string) => `/api/ws?task=${id}&type=logs`,
+  THREAD: (id: string) => `/api/ws?task=${id}&type=thread`,
 } as const;
 
 /**

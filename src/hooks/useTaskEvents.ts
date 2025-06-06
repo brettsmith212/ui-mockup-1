@@ -25,52 +25,110 @@ export function useTaskEvents(options: UseTaskEventsOptions = {}) {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const handleTaskStatusUpdate = useCallback((event: TaskStatusEvent) => {
+  const handleTaskStatusUpdate = useCallback((event: any) => {
     const { taskId, onTaskStatusUpdate } = optionsRef.current;
     
+    // Backend sends: { type: "task-update", data: { id: "abc", status: "stopped", ... } }
+    const eventTaskId = event.data?.id;
+    
     // Only handle events for the specified task or all tasks if no taskId specified
-    if (taskId && event.payload.taskId !== taskId) {
+    if (taskId && eventTaskId !== taskId) {
       return;
     }
 
     // Invalidate relevant queries to trigger refetch
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['task', event.payload.taskId] });
+    queryClient.invalidateQueries({ queryKey: ['task', eventTaskId] });
 
-    // Call custom handler if provided
-    onTaskStatusUpdate?.(event);
+    // Call custom handler if provided - adapt to expected format
+    if (onTaskStatusUpdate) {
+      const adaptedEvent = {
+        type: 'task_status_update',
+        payload: {
+          taskId: eventTaskId,
+          status: event.data?.status,
+          updatedAt: event.data?.started || new Date().toISOString()
+        }
+      };
+      onTaskStatusUpdate(adaptedEvent as TaskStatusEvent);
+    }
   }, [queryClient]);
 
-  const handleTaskLog = useCallback((event: TaskLogEvent) => {
+  const handleTaskLog = useCallback((event: any) => {
     const { taskId, onTaskLog } = optionsRef.current;
     
-    if (taskId && event.payload.taskId !== taskId) {
+    // Backend sends: { type: "log", data: { worker_id: "abc", content: "line", timestamp: "..." } }
+    const eventTaskId = event.data?.worker_id;
+    
+    if (taskId && eventTaskId !== taskId) {
       return;
     }
 
     // Update logs cache
     queryClient.setQueryData(
-      ['task-logs', event.payload.taskId],
-      (oldLogs: string[] = []) => [...oldLogs, event.payload.logLine]
+      ['task-logs', eventTaskId],
+      (oldLogs: string[] = []) => [...oldLogs, event.data?.content || '']
     );
 
-    onTaskLog?.(event);
+    // Call custom handler if provided - adapt to expected format
+    if (onTaskLog) {
+      const adaptedEvent = {
+        type: 'task_log',
+        payload: {
+          taskId: eventTaskId,
+          logLine: event.data?.content || '',
+          timestamp: event.data?.timestamp || new Date().toISOString()
+        }
+      };
+      onTaskLog(adaptedEvent as TaskLogEvent);
+    }
   }, [queryClient]);
 
-  const handleThreadMessage = useCallback((event: ThreadMessageEvent) => {
+  const handleThreadMessage = useCallback((event: any) => {
     const { taskId, onThreadMessage } = optionsRef.current;
     
-    if (taskId && event.payload.taskId !== taskId) {
+    // Backend sends: { type: "thread_message", data: { id: "msg-123", type: "assistant", content: "...", ... } }
+    // Need to extract task ID from somewhere - might need to be passed in context
+    const eventTaskId = taskId; // For now, assume we're filtering at subscription level
+    
+    if (taskId && !eventTaskId) {
       return;
     }
 
+    const messageData = {
+      id: event.data?.id || crypto.randomUUID(),
+      role: event.data?.type === 'assistant' ? 'assistant' : 'user', 
+      content: event.data?.content || '',
+      timestamp: event.data?.timestamp || new Date().toISOString(),
+      taskId: eventTaskId
+    };
+
     // Update thread messages cache
     queryClient.setQueryData(
-      ['task-thread', event.payload.taskId],
-      (oldMessages: any[] = []) => [...oldMessages, event.payload]
+      ['task-thread', eventTaskId],
+      (oldMessages: any[] = []) => {
+        // Prevent duplicates
+        if (oldMessages.some(msg => msg.id === messageData.id)) {
+          return oldMessages;
+        }
+        return [...oldMessages, messageData];
+      }
     );
 
-    onThreadMessage?.(event);
+    // Call custom handler if provided - adapt to expected format
+    if (onThreadMessage) {
+      const adaptedEvent = {
+        type: 'thread_message',
+        payload: {
+          taskId: eventTaskId,
+          messageId: messageData.id,
+          role: messageData.role,
+          content: messageData.content,
+          timestamp: messageData.timestamp
+        }
+      };
+      onThreadMessage(adaptedEvent as ThreadMessageEvent);
+    }
   }, [queryClient]);
 
   const handleTaskProgress = useCallback((event: TaskProgressEvent) => {
@@ -109,9 +167,9 @@ export function useTaskEvents(options: UseTaskEventsOptions = {}) {
       return;
     }
 
-    // Subscribe to events
-    const unsubscribeStatus = wsClient.subscribe('task_status_update', handleTaskStatusUpdate);
-    const unsubscribeLog = wsClient.subscribe('task_log', handleTaskLog);
+    // Subscribe to events (matching backend event types)
+    const unsubscribeStatus = wsClient.subscribe('task-update', handleTaskStatusUpdate);
+    const unsubscribeLog = wsClient.subscribe('log', handleTaskLog);
     const unsubscribeMessage = wsClient.subscribe('thread_message', handleThreadMessage);
     const unsubscribeProgress = wsClient.subscribe('task_progress', handleTaskProgress);
 

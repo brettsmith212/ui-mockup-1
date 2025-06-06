@@ -4,6 +4,8 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query-client'
 import { validateEnvironment, logEnvironment, isDevelopment, env } from '@/config/environment'
 import { tokenManager } from '@/lib/api'
+import { initializeGlobalWebSocket } from '@/lib/websocket'
+import { buildWsUrl, WS_ENDPOINTS } from '@/config/api'
 import AppLayout from './components/layout/AppLayout'
 import Dashboard from './pages/Dashboard'
 import TaskDetail from './pages/TaskDetail'
@@ -25,6 +27,30 @@ function App() {
         
         // Temporarily disable authentication for development
         tokenManager.forceBypassAuth();
+        
+        // Initialize WebSocket for real-time updates
+        try {
+          const wsUrl = buildWsUrl(WS_ENDPOINTS.TASKS);
+          console.log('🔌 Initializing WebSocket:', wsUrl);
+          
+          const wsClient = initializeGlobalWebSocket({
+            url: wsUrl,
+            protocols: [],
+            reconnectInterval: 1000,
+            maxReconnectAttempts: 10,
+            heartbeatInterval: 30000,
+          });
+          
+          // Connect to WebSocket
+          wsClient.connect().then(() => {
+            console.log('✅ WebSocket connected successfully');
+          }).catch((error) => {
+            console.warn('⚠️ WebSocket connection failed:', error);
+          });
+        } catch (error) {
+          console.error('❌ Failed to initialize WebSocket:', error);
+        }
+        
         console.log('🚀 App initialized in development mode');
         console.log('🔓 Authentication bypassed for testing');
       }

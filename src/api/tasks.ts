@@ -3,6 +3,7 @@
 import { apiClient, handleApiError } from '@/lib/api';
 import { API_ENDPOINTS, buildApiUrl } from '@/config/api';
 import { isDevelopment } from '@/config/environment';
+import { queryClient, queryKeys } from '@/lib/query-client';
 import { 
   filterMockTasks, 
   mockThreadMessages, 
@@ -38,22 +39,35 @@ if (isDevelopment()) {
 }
 
 // Utility functions for API responses
-export const transformTaskResponse = (apiTask: any): Task => {
+export const transformTaskResponse = (apiTask: any, preserveExistingPrompt?: boolean): Task => {
+  // Check if we already have a better prompt in cache (extracted from thread)
+  let prompt = apiTask.prompt || apiTask.message || 'No prompt available';
+  
+  if (preserveExistingPrompt) {
+    const existingTask = queryClient.getQueryData(queryKeys.tasks.detail(apiTask.id)) as Task | undefined;
+    if (existingTask?.prompt && existingTask.prompt !== 'No prompt available') {
+      prompt = existingTask.prompt;
+      if (isDevelopment()) {
+        console.log(`🔒 Preserving existing prompt for task ${apiTask.id}: "${prompt}"`);
+      }
+    }
+  }
+  
   // Map the new API response format to our Task interface
   return {
     id: apiTask.id,
     repo: apiTask.repo || 'Unknown', // fallback if missing
     branch: apiTask.branch || 'main', // fallback if missing
     status: mapApiStatus(apiTask.status),
-    prompt: apiTask.prompt || apiTask.message || 'No prompt available', // fallback if missing
+    prompt,
     attempts: apiTask.attempts || 1, // fallback if missing
     createdAt: apiTask.started || apiTask.createdAt || new Date().toISOString(),
     updatedAt: apiTask.updated || apiTask.updatedAt || apiTask.started || new Date().toISOString(),
     owner: apiTask.owner || 'Unknown', // fallback if missing
     prUrl: apiTask.prUrl || apiTask.pr_url,
     prState: apiTask.prState || apiTask.pr_state,
-    title: apiTask.title || (apiTask.prompt || apiTask.message ? 
-      (apiTask.prompt || apiTask.message).slice(0, 50) + ((apiTask.prompt || apiTask.message).length > 50 ? '...' : '') : 
+    title: apiTask.title || (prompt !== 'No prompt available' ? 
+      prompt.slice(0, 50) + (prompt.length > 50 ? '...' : '') : 
       `Task ${apiTask.id}`),
     description: apiTask.description,
     tags: apiTask.tags || [],
@@ -135,7 +149,7 @@ export const getTasks = async (params?: TaskListParams): Promise<TaskListRespons
     
     // Handle new API response format: { tasks, next_cursor, has_more, total }
     const tasks = response.tasks || [];
-    const transformedTasks = tasks.map(transformTaskResponse);
+    const transformedTasks = tasks.map((task: any) => transformTaskResponse(task, true)); // Preserve existing prompts
     
     if (isDevelopment()) {
       console.log('📋 Transformed tasks:', transformedTasks);
@@ -399,6 +413,52 @@ export const retryTask = async (taskId: string, message?: string): Promise<Task>
   }
 };
 
+// Extract thread title from messages for updating task prompt
+const extractThreadTitle = (messages: any[]): string | null => {
+  if (isDevelopment()) {
+    console.log('🔍 Extracting thread title from messages:', messages);
+  }
+  
+  const firstMessage = messages.find(msg => 
+    msg.type === 'system' && 
+    msg.content && 
+    msg.content.startsWith('Thread:')
+  );
+  
+  if (isDevelopment()) {
+    console.log('🔍 Found first Thread message:', firstMessage);
+  }
+  
+  if (firstMessage) {
+    // Try metadata.thread_title first, then extract from content
+    if (firstMessage.metadata?.thread_title) {
+      if (isDevelopment()) {
+        console.log('✅ Using thread_title from metadata:', firstMessage.metadata.thread_title);
+      }
+      return firstMessage.metadata.thread_title;
+    }
+    
+    // Extract from "Thread: {title}" format
+    const match = firstMessage.content.match(/^Thread:\s*(.+)$/);
+    if (match) {
+      if (isDevelopment()) {
+        console.log('✅ Extracted from content:', match[1].trim());
+      }
+      return match[1].trim();
+    }
+    
+    if (isDevelopment()) {
+      console.log('❌ Could not extract title from content:', firstMessage.content);
+    }
+  } else {
+    if (isDevelopment()) {
+      console.log('❌ No Thread: message found in messages');
+    }
+  }
+  
+  return null;
+};
+
 // Get task thread/conversation
 export const getTaskThread = async (taskId: string, params?: TaskThreadQuery): Promise<ThreadMessage[]> => {
   if (USE_MOCK_DATA) {
@@ -421,6 +481,52 @@ export const getTaskThread = async (taskId: string, params?: TaskThreadQuery): P
       API_ENDPOINTS.TASK_DATA.THREAD(taskId), 
       queryParams
     ) as { messages: any[] };
+    
+    // Extract thread title and update task cache if available
+    const threadTitle = extractThreadTitle(response.messages);
+    if (threadTitle) {
+      // Update the individual task cache using correct query key
+      queryClient.setQueryData(queryKeys.tasks.detail(taskId), (oldTask: Task | undefined) => {
+        if (isDevelopment()) {
+          console.log(`🔄 Updating individual task cache for ${taskId}:`, oldTask);
+        }
+        return oldTask ? { ...oldTask, prompt: threadTitle } : oldTask;
+      });
+      
+      // Update all tasks list queries that might contain this task
+      queryClient.setQueriesData({ queryKey: queryKeys.tasks.lists() }, (oldData: any) => {
+        if (isDevelopment()) {
+          console.log(`🔄 Updating tasks list cache:`, oldData);
+        }
+        
+        if (Array.isArray(oldData)) {
+          // Simple array of tasks
+          return oldData.map((task: Task) => 
+            task.id === taskId 
+              ? { ...task, prompt: threadTitle }
+              : task
+          );
+        } else if (oldData?.data && Array.isArray(oldData.data)) {
+          // Paginated response format
+          return {
+            ...oldData,
+            data: oldData.data.map((task: Task) => 
+              task.id === taskId 
+                ? { ...task, prompt: threadTitle }
+                : task
+            )
+          };
+        }
+        return oldData;
+      });
+      
+      // Only invalidate tasks list, NOT the individual task to avoid overwriting the prompt
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      
+      if (isDevelopment()) {
+        console.log(`✅ Updated task ${taskId} prompt to: "${threadTitle}" and invalidated tasks list`);
+      }
+    }
     
     // Transform backend format to our ThreadMessage format
     const messages: ThreadMessage[] = response.messages.map((msg: any) => {
